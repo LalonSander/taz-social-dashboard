@@ -70,6 +70,7 @@ Rails.application.configure do
   # Use a real queuing backend for Active Job (and separate queues per environment).
   # config.active_job.queue_adapter = :resque
   # config.active_job.queue_name_prefix = "taz_social_dashboard_production"
+  config.action_mailer.default_url_options = { host: 'taz-social-dashboard-staging-b4ef96c08dfe.herokuapp.com/' }
 
   config.action_mailer.perform_caching = false
 

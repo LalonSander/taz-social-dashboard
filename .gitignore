@@ -10,6 +10,8 @@
 # Ignore all environment files (except templates).
 /.env*
 !/.env*.erb
+.env.local
+.env.*.local
 
 # Ignore all logfiles and tempfiles.
 /log/*
@@ -40,3 +42,12 @@
 # Ignore Mac and Linux file system files
 *.swp
 .DS_Store
+
+# Redis
+dump.rdb
+
+# Coverage reports
+coverage/
+
+# RSpec
+spec/examples.txt

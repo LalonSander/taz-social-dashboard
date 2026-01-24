@@ -26,8 +26,22 @@ gem "stimulus-rails"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
 
+# Authentication
+gem 'devise'
+
+# Pagination
+gem 'pagy'
+
+# API requests
+gem 'http'
+
+# RSS parsing (for Phase 2)
+gem 'feedjira'
+
+# Text similarity (for Phase 3)
+gem 'tf-idf-similarity'
+
 # Use Redis adapter to run Action Cable in production
-# gem "redis", ">= 4.0.1"
 
 # Use Kredis to get higher-level data types in Redis [https://github.com/rails/kredis]
 # gem "kredis"
@@ -54,6 +68,15 @@ group :development, :test do
   gem "dotenv-rails"
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ]
+
+  # Testing framework
+  gem 'rspec-rails', '~> 6.0'
+  gem 'factory_bot_rails'
+  gem 'faker'
+
+  # Debugging
+  gem 'pry-rails'
+  gem 'pry-byebug'
 end
 
 group :development do
@@ -65,10 +88,21 @@ group :development do
 
   # Speed up commands on slow machines / big apps [https://github.com/rails/spring]
   # gem "spring"
+
+  # Code quality
+  gem 'rubocop-rails', require: false
+  gem 'rubocop-rspec', require: false
+
+  # N+1 query detection
+  gem 'bullet'
 end
 
 group :test do
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
   gem "capybara"
   gem "selenium-webdriver"
+  gem 'shoulda-matchers', '~> 5.0'
+  gem 'simplecov', require: false
+  gem 'webmock'
+  gem 'vcr'
 end
