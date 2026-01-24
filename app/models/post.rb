@@ -52,16 +52,45 @@ class Post < ApplicationRecord
     content.length > length ? "#{content[0...length]}..." : content
   end
 
+  # Generate platform URL if not already stored
+  def platform_url
+    read_attribute(:platform_url) || generate_platform_url
+  end
+
   private
+
+  def generate_platform_url
+    case platform
+    when 'bluesky'
+      generate_bluesky_url
+    when 'mastodon'
+      # Future: generate_mastodon_url
+      nil
+    when 'instagram'
+      # Future: generate_instagram_url
+      nil
+    else
+      nil
+    end
+  end
+
+  def generate_bluesky_url
+    return nil unless platform_data.present?
+
+    author_handle = platform_data.dig('author', 'handle') || social_account&.handle
+    return nil unless author_handle && platform_post_id
+
+    "https://bsky.app/profile/#{author_handle}/post/#{platform_post_id}"
+  end
 
   def calculate_baseline
     # Get last 100 posts before this one from the same account
     baseline_posts = Post
-      .where(social_account_id: social_account_id)
-      .where("posted_at < ?", posted_at)
-      .order(posted_at: :desc)
-      .limit(100)
-      .includes(:post_metrics)
+                     .where(social_account_id: social_account_id)
+                     .where("posted_at < ?", posted_at)
+                     .order(posted_at: :desc)
+                     .limit(100)
+                     .includes(:post_metrics)
 
     # Get latest interaction count for each post
     interactions = baseline_posts.map(&:latest_total_interactions).compact

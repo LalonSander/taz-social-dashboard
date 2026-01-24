@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_01_24_150855) do
+ActiveRecord::Schema[7.1].define(version: 2026_01_24_184520) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -41,10 +41,13 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_24_150855) do
     t.jsonb "platform_data", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "platform_url"
     t.index ["article_id"], name: "index_posts_on_article_id"
+    t.index ["content"], name: "index_posts_on_content_pattern", opclass: :text_pattern_ops
     t.index ["external_url"], name: "index_posts_on_external_url"
     t.index ["platform", "platform_post_id"], name: "index_posts_on_platform_and_platform_post_id", unique: true
     t.index ["platform"], name: "index_posts_on_platform"
+    t.index ["platform_url"], name: "index_posts_on_platform_url"
     t.index ["post_type"], name: "index_posts_on_post_type"
     t.index ["posted_at"], name: "index_posts_on_posted_at"
     t.index ["social_account_id"], name: "index_posts_on_social_account_id"

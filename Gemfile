@@ -41,6 +41,12 @@ gem 'feedjira'
 # Text similarity (for Phase 3)
 gem 'tf-idf-similarity'
 
+# API requests
+gem 'httparty', '~> 0.21'
+
+# Pagination
+gem 'kaminari', '~> 1.2'
+
 # Use Redis adapter to run Action Cable in production
 
 # Use Kredis to get higher-level data types in Redis [https://github.com/rails/kredis]
