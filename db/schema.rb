@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_01_24_184520) do
+ActiveRecord::Schema[7.1].define(version: 2026_01_24_190742) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -42,9 +42,12 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_24_184520) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "platform_url"
+    t.decimal "overperformance_score_cache", precision: 10, scale: 2
+    t.datetime "score_calculated_at"
     t.index ["article_id"], name: "index_posts_on_article_id"
     t.index ["content"], name: "index_posts_on_content_pattern", opclass: :text_pattern_ops
     t.index ["external_url"], name: "index_posts_on_external_url"
+    t.index ["overperformance_score_cache"], name: "index_posts_on_overperformance_score_cache"
     t.index ["platform", "platform_post_id"], name: "index_posts_on_platform_and_platform_post_id", unique: true
     t.index ["platform"], name: "index_posts_on_platform"
     t.index ["platform_url"], name: "index_posts_on_platform_url"

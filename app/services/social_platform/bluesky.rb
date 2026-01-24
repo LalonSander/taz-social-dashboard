@@ -263,10 +263,10 @@ module SocialPlatform
       was_new = metric.new_record?
       metric.save!
 
-      was_new # Return true if this was a new snapshot, false if updated
-    rescue StandardError => e
-      Rails.logger.error "Error updating metrics for post #{post.id}: #{e.message}"
-      false
+      # Recalculate and cache overperformance score
+      post.calculate_and_cache_overperformance_score! if post.posted_at > 30.days.ago
+
+      true
     end
 
     # Fetch a specific post thread

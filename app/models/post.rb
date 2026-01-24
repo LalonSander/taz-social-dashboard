@@ -41,11 +41,27 @@ class Post < ApplicationRecord
     latest_metrics&.total_interactions || 0
   end
 
+  # Use cached score if available and recent, otherwise calculate
   def overperformance_score
-    baseline = calculate_baseline
-    return 0 if baseline.zero?
+    # If cache exists and is less than 1 hour old, use it
+    if overperformance_score_cache.present? &&
+       score_calculated_at.present? &&
+       score_calculated_at > 1.hour.ago
+      return overperformance_score_cache
+    end
 
-    ((latest_total_interactions / baseline.to_f) * 100).round(1)
+    # Otherwise calculate fresh
+    calculate_overperformance_score
+  end
+
+  # Calculate and cache the score
+  def calculate_and_cache_overperformance_score!
+    score = calculate_overperformance_score
+    update_columns(
+      overperformance_score_cache: score,
+      score_calculated_at: Time.current
+    )
+    score
   end
 
   def truncated_content(length = 100)
@@ -58,6 +74,13 @@ class Post < ApplicationRecord
   end
 
   private
+
+  def calculate_overperformance_score
+    baseline = calculate_baseline
+    return 0 if baseline.zero?
+
+    ((latest_total_interactions / baseline.to_f) * 100).round(2)
+  end
 
   def generate_platform_url
     case platform

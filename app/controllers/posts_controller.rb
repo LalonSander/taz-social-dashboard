@@ -30,39 +30,84 @@ class PostsController < ApplicationController
       @posts = @posts.where(id: post_ids)
     end
 
+    # Filter by minimum performance (overperformance score)
+    if params[:min_performance].present? && params[:min_performance].to_i > 0
+      min_perf = params[:min_performance].to_i
+      @posts = @posts.where('overperformance_score_cache >= ?', min_perf)
+    end
+
     # Sorting
     sort_column = params[:sort] || 'posted_at'
     sort_direction = params[:direction] || 'desc'
 
-    case sort_column
-    when 'posted_at'
-      @posts = @posts.order("posted_at #{sort_direction}")
-    when 'likes', 'replies', 'reposts', 'total_interactions'
-      # Join with latest metrics for sorting
-      @posts = @posts
-               .joins("LEFT JOIN LATERAL (
-          SELECT * FROM post_metrics
-          WHERE post_metrics.post_id = posts.id
-          ORDER BY recorded_at DESC
-          LIMIT 1
-        ) latest_metrics ON true")
-               .order("latest_metrics.#{sort_column} #{sort_direction} NULLS LAST")
-    when 'overperformance'
-      # This is complex, we'll calculate it in memory after fetching
-      # For now, just sort by total interactions as a proxy
-      @posts = @posts
-               .joins("LEFT JOIN LATERAL (
-          SELECT * FROM post_metrics
-          WHERE post_metrics.post_id = posts.id
-          ORDER BY recorded_at DESC
-          LIMIT 1
-        ) latest_metrics ON true")
-               .order("latest_metrics.total_interactions #{sort_direction} NULLS LAST")
-    else
-      @posts = @posts.order("posted_at #{sort_direction}")
+    # Only apply database sorting if NOT filtering by performance
+    # (performance filter requires in-memory filtering, so sort happens later)
+    unless @filtered_by_performance
+      case sort_column
+      when 'posted_at'
+        @posts = @posts.order("posted_at #{sort_direction}")
+      when 'likes', 'replies', 'reposts', 'total_interactions'
+        # Join with latest metrics for sorting
+        @posts = @posts
+                 .joins("LEFT JOIN LATERAL (
+            SELECT * FROM post_metrics
+            WHERE post_metrics.post_id = posts.id
+            ORDER BY recorded_at DESC
+            LIMIT 1
+          ) latest_metrics ON true")
+                 .order("latest_metrics.#{sort_column} #{sort_direction} NULLS LAST")
+      when 'overperformance'
+        # This is complex, we'll calculate it in memory after fetching
+        # For now, just sort by total interactions as a proxy
+        @posts = @posts
+                 .joins("LEFT JOIN LATERAL (
+            SELECT * FROM post_metrics
+            WHERE post_metrics.post_id = posts.id
+            ORDER BY recorded_at DESC
+            LIMIT 1
+          ) latest_metrics ON true")
+                 .order("latest_metrics.total_interactions #{sort_direction} NULLS LAST")
+      else
+        @posts = @posts.order("posted_at #{sort_direction}")
+      end
     end
 
-    @posts = @posts.page(params[:page]).per(25)
+    # Apply pagination
+    if @filtered_by_performance
+      # Performance filter requires in-memory filtering, so paginate manually
+      # Also apply sorting here since we skipped it above
+      case sort_column
+      when 'posted_at'
+        @posts_with_performance.sort_by! { |p| p.posted_at }
+        @posts_with_performance.reverse! if sort_direction == 'desc'
+      when 'likes'
+        @posts_with_performance.sort_by! { |p| p.latest_metrics&.likes || 0 }
+        @posts_with_performance.reverse! if sort_direction == 'desc'
+      when 'replies'
+        @posts_with_performance.sort_by! { |p| p.latest_metrics&.replies || 0 }
+        @posts_with_performance.reverse! if sort_direction == 'desc'
+      when 'reposts'
+        @posts_with_performance.sort_by! { |p| p.latest_metrics&.reposts || 0 }
+        @posts_with_performance.reverse! if sort_direction == 'desc'
+      when 'total_interactions'
+        @posts_with_performance.sort_by! { |p| p.latest_total_interactions }
+        @posts_with_performance.reverse! if sort_direction == 'desc'
+      when 'overperformance'
+        @posts_with_performance.sort_by! { |p| p.overperformance_score }
+        @posts_with_performance.reverse! if sort_direction == 'desc'
+      end
+
+      total_count = @posts_with_performance.size
+      page = (params[:page] || 1).to_i
+      per_page = 25
+      offset = (page - 1) * per_page
+
+      @posts = Kaminari.paginate_array(@posts_with_performance, total_count: total_count)
+                       .page(page)
+                       .per(per_page)
+    else
+      @posts = @posts.page(params[:page]).per(25)
+    end
 
     # Get last sync time for all Bluesky accounts
     @last_sync = SocialAccount.bluesky.active.maximum(:last_synced_at)
