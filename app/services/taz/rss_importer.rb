@@ -115,6 +115,8 @@ module Taz
       if article.save
         Rails.logger.info "Created article #{msid}: #{article.truncated_title(50)}"
         @stats[source][:new] += 1
+
+        # Calculate TF-IDF vector and prediction happen automatically via callbacks
       else
         Rails.logger.error "Failed to save article #{msid}: #{article.errors.full_messages.join(', ')}"
         @stats[source][:errors] += 1

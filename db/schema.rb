@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_01_25_121758) do
+ActiveRecord::Schema[7.1].define(version: 2026_01_25_132335) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -24,10 +24,14 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_25_121758) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "cms_id"
+    t.jsonb "tfidf_vector"
+    t.jsonb "prediction_metadata", default: {}
     t.index ["cms_id"], name: "index_articles_on_cms_id"
     t.index ["msid"], name: "index_articles_on_msid", unique: true
     t.index ["predicted_performance_score"], name: "index_articles_on_predicted_performance_score"
+    t.index ["prediction_metadata"], name: "index_articles_on_prediction_metadata", using: :gin
     t.index ["published_at"], name: "index_articles_on_published_at"
+    t.index ["tfidf_vector"], name: "index_articles_on_tfidf_vector", using: :gin
   end
 
   create_table "post_metrics", force: :cascade do |t|

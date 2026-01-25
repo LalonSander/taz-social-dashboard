@@ -1,4 +1,4 @@
-<%# app/views/articles/show.html.erb - COMPLETE FILE %>
+<%# app/views/articles/show.html.erb - COMPLETE FILE WITH PREDICTION DETAILS %>
 
 <div class="container-fluid py-4">
   <!-- Back button and actions -->
@@ -62,9 +62,32 @@
           <% if @article.predicted_performance_score.present? %>
             <div class="mb-2">
               <small class="text-muted d-block">Predicted Performance</small>
-              <span class="badge bg-success fs-5">
-                <%= number_with_precision(@article.predicted_performance_score, precision: 1) %>
+              <% score = @article.predicted_performance_score %>
+              <span class="badge <%= if score >= 150
+                        'bg-success'
+                      elsif score >= 100
+                        'bg-primary'
+                      elsif score >= 50
+                        'bg-warning text-dark'
+                      else
+                        'bg-danger'
+                      end %> fs-5">
+                <%= number_with_precision(score, precision: 1) %>%
               </span>
+            </div>
+            <% if @article.prediction_metadata.present? %>
+              <small class="text-muted d-block">
+                Method: <%= @article.prediction_metadata['method'] %>
+                <% if @article.prediction_metadata['count'].to_i > 0 %>
+                  <br>
+                  <%= @article.prediction_metadata['count'] %> similar articles
+                <% end %>
+              </small>
+            <% end %>
+          <% else %>
+            <div class="mb-2">
+              <small class="text-muted d-block">Predicted Performance</small>
+              <span class="badge bg-secondary">Not calculated</span>
             </div>
           <% end %>
         </div>
@@ -100,6 +123,95 @@
       </div>
     </div>
   </div>
+
+  <!-- Similar Articles (Prediction Details) -->
+  <% if @article.prediction_details.present? && @article.prediction_details.any? %>
+    <div class="card mb-4">
+      <div class="card-header bg-white">
+        <h5 class="mb-0">
+          <i class="bi bi-graph-up me-2"></i>
+          Similar Articles Used for Prediction
+          <span class="badge bg-secondary"><%= @article.prediction_details.length %></span>
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th scope="col">Article</th>
+                <th scope="col" class="text-center">Published</th>
+                <th scope="col" class="text-center">Similarity</th>
+                <th scope="col" class="text-center">Recency Weight</th>
+                <th scope="col" class="text-center">Avg Performance</th>
+                <th scope="col" class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @article.prediction_details.first(10).each do |detail| %>
+                <% similar_article = Article.find_by(id: detail['id']) %>
+                <% next unless similar_article %>
+                <tr>
+                  <td style="max-width: 400px;">
+                    <%= link_to article_path(similar_article), class: "text-decoration-none text-dark", data: { turbo_frame: "_top" } do %>
+                      <div class="fw-semibold"><%= similar_article.truncated_title(60) %></div>
+                      <small class="text-muted">MSID: <%= similar_article.msid %></small>
+                    <% end %>
+                  </td>
+                  <td class="text-center text-nowrap">
+                    <small><%= similar_article.published_at.strftime('%b %d, %Y') %></small>
+                  </td>
+                  <td class="text-center">
+                    <span class="badge bg-info">
+                      <%= number_with_precision(detail['similarity'] * 100, precision: 1) %>%
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <span class="badge bg-secondary">
+                      <%= number_with_precision(detail['recency_weight'] * 100, precision: 1) %>%
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <% perf = detail['avg_performance'].to_f %>
+                    <span class="badge <%= if perf >= 150
+                              'bg-success'
+                            elsif perf >= 100
+                              'bg-primary'
+                            elsif perf >= 50
+                              'bg-warning text-dark'
+                            else
+                              'bg-danger'
+                            end %>">
+                      <%= number_with_precision(perf, precision: 1) %>%
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <%= link_to article_path(similar_article), class: "btn btn-sm btn-outline-primary", data: { turbo_frame: "_top" } do %>
+                      <i class="bi bi-eye"></i>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+
+        <% if @article.prediction_details.length > 10 %>
+          <div class="p-3 text-center text-muted small">
+            Showing top 10 of <%= @article.prediction_details.length %> similar articles
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% elsif @article.prediction_metadata.present? && @article.prediction_metadata['method'] == 'default' %>
+    <div class="card mb-4">
+      <div class="card-body text-center py-4">
+        <i class="bi bi-info-circle display-4 text-muted"></i>
+        <p class="mt-3 mb-1 fw-medium">No Similar Articles Found</p>
+        <p class="text-muted small">Prediction based on average baseline (100%)</p>
+      </div>
+    </div>
+  <% end %>
 
   <!-- Associated Posts -->
   <div class="card">

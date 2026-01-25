@@ -40,6 +40,7 @@ gem 'feedjira'
 
 # Text similarity (for Phase 3)
 gem 'tf-idf-similarity'
+gem 'stopwords-filter'   # German stopwords
 
 # API requests
 gem 'httparty', '~> 0.21'
