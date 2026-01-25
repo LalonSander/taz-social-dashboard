@@ -124,14 +124,10 @@ module Taz
     # Extract published date
     # XML path: //item/meta/published/dt/date
     def extract_published_date(doc)
-      date_node = doc.at_xpath('//item/meta/published/dt/date')
+      ts_node = doc.at_xpath('//item/meta/published/ts')
+      return nil unless ts_node
 
-      return nil unless date_node
-
-      date_text = date_node.text.strip
-
-      # Parse date - try multiple formats
-      parse_date(date_text)
+      Time.zone.at(ts_node.text.to_i)
     end
 
     # Parse date from various possible formats
