@@ -8,7 +8,7 @@
       <%= link_to "Clear All", posts_path, class: "btn btn-sm btn-outline-secondary" %>
     </div>
 
-    <%= form_with url: posts_path, method: :get do |f| %>
+    <%= form_with url: posts_path, method: :get, data: { turbo_frame: "posts_table" } do |f| %>
       <!-- Search -->
       <div class="mb-3">
         <label class="form-label small fw-semibold">Search Content</label>
@@ -92,12 +92,13 @@
     </div>
 
     <!-- Table Container -->
+    <%= turbo_frame_tag "posts_table" do %>
       <div class="table-container">
         <table class="table table-hover mb-0">
           <thead class="table-light sticky-top">
             <tr>
               <th scope="col" class="text-nowrap">
-                <%= link_to posts_path(sort: 'posted_at', direction: (params[:sort] == 'posted_at' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1",  do %>
+                <%= link_to posts_path(sort: 'posted_at', direction: (params[:sort] == 'posted_at' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "posts_table" } do %>
                   Date
                   <% if params[:sort] == 'posted_at' %>
                     <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
@@ -107,7 +108,7 @@
               <th scope="col">Content</th>
               <th scope="col" class="text-nowrap">Type</th>
               <th scope="col" class="text-nowrap">
-                <%= link_to posts_path(sort: 'likes', direction: (params[:sort] == 'likes' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1",  do %>
+                <%= link_to posts_path(sort: 'likes', direction: (params[:sort] == 'likes' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "posts_table" } do %>
                   Likes
                   <% if params[:sort] == 'likes' %>
                     <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
@@ -115,7 +116,7 @@
                 <% end %>
               </th>
               <th scope="col" class="text-nowrap">
-                <%= link_to posts_path(sort: 'replies', direction: (params[:sort] == 'replies' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1",  do %>
+                <%= link_to posts_path(sort: 'replies', direction: (params[:sort] == 'replies' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "posts_table" } do %>
                   Replies
                   <% if params[:sort] == 'replies' %>
                     <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
@@ -123,7 +124,7 @@
                 <% end %>
               </th>
               <th scope="col" class="text-nowrap">
-                <%= link_to posts_path(sort: 'reposts', direction: (params[:sort] == 'reposts' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1",  do %>
+                <%= link_to posts_path(sort: 'reposts', direction: (params[:sort] == 'reposts' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "posts_table" } do %>
                   Reposts
                   <% if params[:sort] == 'reposts' %>
                     <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
@@ -131,7 +132,7 @@
                 <% end %>
               </th>
               <th scope="col" class="text-nowrap">
-                <%= link_to posts_path(sort: 'total_interactions', direction: (params[:sort] == 'total_interactions' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1",  do %>
+                <%= link_to posts_path(sort: 'total_interactions', direction: (params[:sort] == 'total_interactions' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "posts_table" } do %>
                   Total
                   <% if params[:sort] == 'total_interactions' %>
                     <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
@@ -140,7 +141,7 @@
               </th>
               <th scope="col" class="text-nowrap">Trend</th>
               <th scope="col" class="text-nowrap">
-                <%= link_to posts_path(sort: 'overperformance', direction: (params[:sort] == 'overperformance' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1",  do %>
+                <%= link_to posts_path(sort: 'overperformance', direction: (params[:sort] == 'overperformance' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "posts_table" } do %>
                   Performance
                   <% if params[:sort] == 'overperformance' %>
                     <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
