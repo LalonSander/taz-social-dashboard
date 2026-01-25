@@ -224,7 +224,6 @@ module SocialPlatform
       return false if post.persisted? && post.posted_at < 30.days.ago
 
       is_new_post = post.new_record?
-      old_total_interactions = post.latest_total_interactions unless is_new_post
 
       post.assign_attributes(
         social_account: @account,
@@ -241,23 +240,27 @@ module SocialPlatform
       post.score_calculation_status = 'not_calculated' if is_new_post
 
       if post.save
-        # Create or update metrics for the current hour
-        current_hour = Time.current.beginning_of_hour
-
-        metric = post.post_metrics.find_or_initialize_by(recorded_at: current_hour)
-        new_total = post_data[:likes] + post_data[:replies] + post_data[:reposts] + post_data[:quotes]
-
-        metric.assign_attributes(
+        # Prepare new metric values
+        new_values = {
           likes: post_data[:likes],
           replies: post_data[:replies],
           reposts: post_data[:reposts],
           quotes: post_data[:quotes]
-        )
-        metric.save!
+        }
 
-        # If metrics changed for existing post, mark for recalculation
-        if !is_new_post && (old_total_interactions != new_total)
-          post.update_column(:score_calculation_status, 'not_calculated')
+        # Check if metrics changed from latest record
+        latest_metric = post.post_metrics.order(recorded_at: :desc).first
+
+        if should_save_metric?(latest_metric, new_values)
+          # Create new metric record with current hour timestamp
+          current_hour = Time.current.beginning_of_hour
+          post.post_metrics.create!(
+            recorded_at: current_hour,
+            **new_values
+          )
+
+          # If metrics changed for existing post, mark for recalculation
+          post.update_column(:score_calculation_status, 'not_calculated') unless is_new_post
         end
 
         true
@@ -305,40 +308,50 @@ module SocialPlatform
       thread_post = data.dig('thread', 'post')
       return false unless thread_post
 
-      # Round to current hour for consistent snapshots
-      current_hour = Time.current.beginning_of_hour
-
-      # Find or create metric for this hour
-      metric = post.post_metrics.find_or_initialize_by(recorded_at: current_hour)
-
-      new_total = (thread_post['likeCount'] || 0) +
-                  (thread_post['replyCount'] || 0) +
-                  (thread_post['repostCount'] || 0) +
-                  (thread_post['quoteCount'] || 0)
-
-      old_total = post.latest_total_interactions
-
-      metric.assign_attributes(
+      # Prepare new metric values
+      new_values = {
         likes: thread_post['likeCount'] || 0,
         replies: thread_post['replyCount'] || 0,
         reposts: thread_post['repostCount'] || 0,
         quotes: thread_post['quoteCount'] || 0
-      )
+      }
 
-      metric.save!
+      # Check if metrics changed from latest record
+      latest_metric = post.post_metrics.order(recorded_at: :desc).first
 
-      # Update the post's metrics_updated_at
-      # If metrics changed, mark for score recalculation
-      if new_total == old_total
-        post.update_column(:metrics_updated_at, Time.current)
-      else
+      if should_save_metric?(latest_metric, new_values)
+        # Create new metric record with current hour timestamp
+        current_hour = Time.current.beginning_of_hour
+
+        post.post_metrics.create!(
+          recorded_at: current_hour,
+          **new_values
+        )
+
+        # Metrics changed, mark for score recalculation
         post.update_columns(
           metrics_updated_at: Time.current,
           score_calculation_status: 'not_calculated'
         )
-      end
 
-      true
+        true
+      else
+        # Metrics unchanged, just update timestamp
+        post.update_column(:metrics_updated_at, Time.current)
+        false
+      end
+    end
+
+    # Check if we should save a new metric record
+    def should_save_metric?(latest_metric, new_values)
+      # Always save if this is the first metric
+      return true if latest_metric.nil?
+
+      # Save if any value changed
+      latest_metric.likes != new_values[:likes] ||
+        latest_metric.replies != new_values[:replies] ||
+        latest_metric.reposts != new_values[:reposts] ||
+        latest_metric.quotes != new_values[:quotes]
     end
 
     # Fetch a specific post thread

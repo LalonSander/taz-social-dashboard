@@ -1,0 +1,4 @@
+<%# app/views/kaminari/_page.html.erb %>
+<li class="page-item <%= 'active' if page.current? %>">
+  <%= link_to page, url, remote: remote, rel: page.rel, class: 'page-link' %>
+</li>

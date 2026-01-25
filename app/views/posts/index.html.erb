@@ -1,334 +1,281 @@
-<%# app/views/posts/index.html.erb %>
+<%# app/views/posts/index.html.erb - BOOTSTRAP VERSION %>
 
-<div class="container mx-auto px-4 py-8">
-  <!-- Header with Sync Button -->
-  <div class="flex justify-between items-center mb-6">
-    <div>
-      <h1 class="text-3xl font-bold text-gray-900">Bluesky Posts</h1>
-      <% if @last_sync %>
-        <p class="text-sm text-gray-600 mt-1">
-          Last synced: <%= time_ago_in_words(@last_sync) %> ago
-        </p>
-      <% else %>
-        <p class="text-sm text-gray-600 mt-1">
-          Never synced
-        </p>
-      <% end %>
+<div class="d-flex">
+  <!-- Sidebar Filters -->
+  <aside class="sidebar d-none d-lg-block">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h5 class="mb-0">Filters</h5>
+      <%= link_to "Clear All", posts_path, class: "btn btn-sm btn-outline-secondary" %>
     </div>
 
-    <%= button_to sync_posts_path, method: :post, class: "bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-200 flex items-center gap-2", data: { turbo: false } do %>
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-      </svg>
-      Sync Now
-    <% end %>
-  </div>
-
-  <!-- Flash Messages -->
-  <% if notice %>
-    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6" role="alert">
-      <p><%= notice %></p>
-    </div>
-  <% end %>
-
-  <% if alert %>
-    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6" role="alert">
-      <p><%= alert %></p>
-    </div>
-  <% end %>
-
-  <!-- Search and Filter Form -->
-  <div class="bg-white shadow-md rounded-lg p-6 mb-6">
-    <%= form_with url: posts_path, method: :get, class: "space-y-4", data: { turbo_frame: "posts_table" } do |f| %>
-      <!-- Search Bar -->
-      <div>
-        <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Search Posts</label>
+    <%= form_with url: posts_path, method: :get, data: { turbo_frame: "posts_table" } do |f| %>
+      <!-- Search -->
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Search Content</label>
         <%= f.text_field :search,
             value: params[:search],
-            placeholder: "Search post content...",
-            class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" %>
+            placeholder: "Search posts...",
+            class: "form-control form-control-sm" %>
       </div>
 
-      <!-- Filters Row -->
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <!-- Post Type Filter -->
-        <div>
-          <label for="post_type" class="block text-sm font-medium text-gray-700 mb-2">Post Type</label>
-          <%= f.select :post_type,
-              options_for_select([
-                ['All Types', 'all'],
-                ['Link', 'link'],
-                ['Image', 'image'],
-                ['Text', 'text'],
-                ['Video', 'video']
-              ], params[:post_type] || 'all'),
-              {},
-              class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" %>
-        </div>
+      <!-- Post Type -->
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Post Type</label>
+        <%= f.select :post_type,
+            options_for_select([
+              ['All Types', 'all'],
+              ['Link', 'link'],
+              ['Image', 'image'],
+              ['Text', 'text'],
+              ['Video', 'video']
+            ], params[:post_type] || 'all'),
+            {},
+            class: "form-select form-select-sm" %>
+      </div>
 
-        <!-- Date From -->
-        <div>
-          <label for="date_from" class="block text-sm font-medium text-gray-700 mb-2">From Date</label>
+      <!-- Date Range -->
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Date Range</label>
+        <div class="mb-2">
+          <label class="form-label small text-muted">From</label>
           <%= f.date_field :date_from,
               value: params[:date_from],
-              class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" %>
+              class: "form-control form-control-sm" %>
         </div>
-
-        <!-- Date To -->
         <div>
-          <label for="date_to" class="block text-sm font-medium text-gray-700 mb-2">To Date</label>
+          <label class="form-label small text-muted">To</label>
           <%= f.date_field :date_to,
               value: params[:date_to],
-              class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" %>
+              class: "form-control form-control-sm" %>
         </div>
+      </div>
 
-        <!-- Minimum Interactions -->
-        <div>
-          <label for="min_interactions" class="block text-sm font-medium text-gray-700 mb-2">Min. Interactions</label>
-          <%= f.number_field :min_interactions,
-              value: params[:min_interactions],
-              placeholder: "e.g. 100",
-              min: 0,
-              class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" %>
-        </div>
+      <!-- Minimum Interactions -->
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Min. Interactions</label>
+        <%= f.number_field :min_interactions,
+            value: params[:min_interactions],
+            placeholder: "e.g. 100",
+            min: 0,
+            class: "form-control form-control-sm" %>
+        <small class="form-text text-muted">Total likes + replies + reposts</small>
+      </div>
 
-        <!-- Minimum Performance -->
-        <div>
-          <label for="min_performance" class="block text-sm font-medium text-gray-700 mb-2">
-            Min. Performance
-            <span class="text-xs text-gray-500">(% score)</span>
-          </label>
-          <%= f.number_field :min_performance,
-              value: params[:min_performance],
-              placeholder: "e.g. 150",
-              min: 0,
-              class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" %>
-        </div>
+      <!-- Minimum Performance -->
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Min. Performance Score</label>
+        <%= f.number_field :min_performance,
+            value: params[:min_performance],
+            placeholder: "e.g. 150",
+            min: 0,
+            class: "form-control form-control-sm" %>
+        <small class="form-text text-muted">Percentage vs baseline (100% = average)</small>
       </div>
 
       <!-- Preserve sort parameters -->
       <%= f.hidden_field :sort, value: params[:sort] %>
       <%= f.hidden_field :direction, value: params[:direction] %>
 
-      <!-- Action Buttons -->
-      <div class="flex gap-3">
-        <%= f.submit "Apply Filters", class: "bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-200" %>
-        <%= link_to "Clear Filters", posts_path, class: "bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-6 rounded-lg transition duration-200" %>
+      <!-- Apply Button -->
+      <%= f.submit "Apply Filters", class: "btn btn-primary btn-sm w-100" %>
+    <% end %>
+  </aside>
+
+  <!-- Main Content Area -->
+  <div class="main-content flex-grow-1">
+    <!-- Mobile Filter Toggle -->
+    <div class="d-lg-none bg-white border-bottom p-3">
+      <button class="btn btn-outline-secondary btn-sm w-100" type="button" data-bs-toggle="offcanvas" data-bs-target="#filtersOffcanvas">
+        <i class="bi bi-funnel me-2"></i>
+        Filters
+      </button>
+    </div>
+
+    <!-- Table Container -->
+    <%= turbo_frame_tag "posts_table" do %>
+      <div class="table-container">
+        <table class="table table-hover mb-0">
+          <thead class="table-light sticky-top">
+            <tr>
+              <th scope="col" class="text-nowrap">
+                <%= link_to posts_path(sort: 'posted_at', direction: (params[:sort] == 'posted_at' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "posts_table" } do %>
+                  Date
+                  <% if params[:sort] == 'posted_at' %>
+                    <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
+                  <% end %>
+                <% end %>
+              </th>
+              <th scope="col">Content</th>
+              <th scope="col" class="text-nowrap">Type</th>
+              <th scope="col" class="text-nowrap">
+                <%= link_to posts_path(sort: 'likes', direction: (params[:sort] == 'likes' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "posts_table" } do %>
+                  Likes
+                  <% if params[:sort] == 'likes' %>
+                    <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
+                  <% end %>
+                <% end %>
+              </th>
+              <th scope="col" class="text-nowrap">
+                <%= link_to posts_path(sort: 'replies', direction: (params[:sort] == 'replies' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "posts_table" } do %>
+                  Replies
+                  <% if params[:sort] == 'replies' %>
+                    <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
+                  <% end %>
+                <% end %>
+              </th>
+              <th scope="col" class="text-nowrap">
+                <%= link_to posts_path(sort: 'reposts', direction: (params[:sort] == 'reposts' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "posts_table" } do %>
+                  Reposts
+                  <% if params[:sort] == 'reposts' %>
+                    <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
+                  <% end %>
+                <% end %>
+              </th>
+              <th scope="col" class="text-nowrap">
+                <%= link_to posts_path(sort: 'total_interactions', direction: (params[:sort] == 'total_interactions' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "posts_table" } do %>
+                  Total
+                  <% if params[:sort] == 'total_interactions' %>
+                    <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
+                  <% end %>
+                <% end %>
+              </th>
+              <th scope="col" class="text-nowrap">Trend</th>
+              <th scope="col" class="text-nowrap">
+                <%= link_to posts_path(sort: 'overperformance', direction: (params[:sort] == 'overperformance' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "posts_table" } do %>
+                  Performance
+                  <% if params[:sort] == 'overperformance' %>
+                    <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
+                  <% end %>
+                <% end %>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if @posts.any? %>
+              <% @posts.each do |post| %>
+                <tr>
+                  <td class="text-nowrap">
+                    <% if post.platform_url %>
+                      <%= link_to post.platform_url, target: "_blank", rel: "noopener noreferrer", class: "text-decoration-none" do %>
+                        <div class="fw-medium"><%= post.posted_at.strftime('%b %d') %></div>
+                        <small class="text-muted"><%= post.posted_at.strftime('%H:%M') %></small>
+                      <% end %>
+                    <% else %>
+                      <div class="fw-medium"><%= post.posted_at.strftime('%b %d') %></div>
+                      <small class="text-muted"><%= post.posted_at.strftime('%H:%M') %></small>
+                    <% end %>
+                  </td>
+                  <td style="max-width: 400px;">
+                    <div class="text-truncate" style="max-width: 400px;">
+                      <%= post.truncated_content(120) %>
+                    </div>
+                    <% if post.external_url %>
+                      <%= link_to post.external_url, target: "_blank", class: "small text-decoration-none" do %>
+                        <i class="bi bi-box-arrow-up-right me-1"></i>
+                        <%= URI.parse(post.external_url).host %>
+                      <% end %>
+                    <% end %>
+                  </td>
+                  <td class="text-nowrap">
+                    <span class="badge <%= case post.post_type
+                          when 'link' then 'bg-primary'
+                          when 'image' then 'bg-secondary'
+                          when 'video' then 'bg-danger'
+                          else 'bg-light text-dark'
+                          end %>">
+                      <%= post.post_type.capitalize %>
+                    </span>
+                  </td>
+                  <td class="fw-semibold"><%= number_with_delimiter(post.latest_metrics&.likes || 0) %></td>
+                  <td class="fw-semibold"><%= number_with_delimiter(post.latest_metrics&.replies || 0) %></td>
+                  <td class="fw-semibold"><%= number_with_delimiter(post.latest_metrics&.reposts || 0) %></td>
+                  <td class="fw-bold"><%= number_with_delimiter(post.latest_total_interactions) %></td>
+                  <td>
+                    <%= post_metrics_sparkline(post, width: 80, height: 25) %>
+                  </td>
+                  <td class="text-nowrap">
+                    <% if post.overperformance_score_cache.present? %>
+                      <% score = post.overperformance_score_cache %>
+                      <span class="badge <%= if score >= 150
+                                'bg-success'
+                              elsif score >= 100
+                                'bg-primary'
+                              elsif score >= 50
+                                'bg-warning text-dark'
+                              else
+                                'bg-danger'
+                              end %>">
+                        <%= number_with_precision(score, precision: 1) %>%
+                      </span>
+                    <% else %>
+                      <span class="text-muted">-</span>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            <% else %>
+              <tr>
+                <td colspan="9" class="text-center py-5">
+                  <i class="bi bi-inbox display-4 text-muted"></i>
+                  <p class="mt-3 mb-1 fw-medium">No posts found</p>
+                  <p class="text-muted small">Try adjusting your filters or sync your accounts</p>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
       </div>
+
+      <!-- Pagination -->
+      <% if @posts.any? %>
+        <div class="bg-white border-top p-3">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div class="text-muted small">
+              Showing
+              <span class="fw-semibold"><%= @posts.offset_value + 1 %></span>
+              to
+              <span class="fw-semibold"><%= [@posts.offset_value + @posts.length, @posts.total_count].min %></span>
+              of
+              <span class="fw-semibold"><%= @posts.total_count %></span>
+              posts
+            </div>
+
+            <nav>
+              <%= paginate @posts,
+                  params: {
+                    search: params[:search],
+                    post_type: params[:post_type],
+                    date_from: params[:date_from],
+                    date_to: params[:date_to],
+                    min_interactions: params[:min_interactions],
+                    min_performance: params[:min_performance],
+                    sort: params[:sort],
+                    direction: params[:direction]
+                  },
+                  theme: 'custom' %>
+            </nav>
+          </div>
+        </div>
+      <% end %>
     <% end %>
   </div>
+</div>
 
-  <!-- Posts Table -->
-  <%= turbo_frame_tag "posts_table" do %>
-    <div class="bg-white shadow-md rounded-lg overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              <%= link_to posts_path(sort: 'posted_at', direction: (params[:sort] == 'posted_at' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "flex items-center hover:text-gray-700", data: { turbo_frame: "posts_table" } do %>
-                Date
-                <% if params[:sort] == 'posted_at' %>
-                  <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
-                    <% if params[:direction] == 'asc' %>
-                      <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
-                    <% else %>
-                      <path d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"/>
-                    <% end %>
-                  </svg>
-                <% end %>
-              <% end %>
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Content
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Type
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              <%= link_to posts_path(sort: 'likes', direction: (params[:sort] == 'likes' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "flex items-center hover:text-gray-700", data: { turbo_frame: "posts_table" } do %>
-                Likes
-                <% if params[:sort] == 'likes' %>
-                  <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
-                    <% if params[:direction] == 'asc' %>
-                      <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
-                    <% else %>
-                      <path d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"/>
-                    <% end %>
-                  </svg>
-                <% end %>
-              <% end %>
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              <%= link_to posts_path(sort: 'replies', direction: (params[:sort] == 'replies' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "flex items-center hover:text-gray-700", data: { turbo_frame: "posts_table" } do %>
-                Replies
-                <% if params[:sort] == 'replies' %>
-                  <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
-                    <% if params[:direction] == 'asc' %>
-                      <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
-                    <% else %>
-                      <path d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"/>
-                    <% end %>
-                  </svg>
-                <% end %>
-              <% end %>
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              <%= link_to posts_path(sort: 'reposts', direction: (params[:sort] == 'reposts' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "flex items-center hover:text-gray-700", data: { turbo_frame: "posts_table" } do %>
-                Reposts
-                <% if params[:sort] == 'reposts' %>
-                  <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
-                    <% if params[:direction] == 'asc' %>
-                      <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
-                    <% else %>
-                      <path d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"/>
-                    <% end %>
-                  </svg>
-                <% end %>
-              <% end %>
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              <%= link_to posts_path(sort: 'total_interactions', direction: (params[:sort] == 'total_interactions' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "flex items-center hover:text-gray-700", data: { turbo_frame: "posts_table" } do %>
-                Total
-                <% if params[:sort] == 'total_interactions' %>
-                  <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
-                    <% if params[:direction] == 'asc' %>
-                      <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
-                    <% else %>
-                      <path d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"/>
-                    <% end %>
-                  </svg>
-                <% end %>
-              <% end %>
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              <%= link_to posts_path(sort: 'overperformance', direction: (params[:sort] == 'overperformance' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "flex items-center hover:text-gray-700", data: { turbo_frame: "posts_table" } do %>
-                Performance
-                <% if params[:sort] == 'overperformance' %>
-                  <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
-                    <% if params[:direction] == 'asc' %>
-                      <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
-                    <% else %>
-                      <path d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"/>
-                    <% end %>
-                  </svg>
-                <% end %>
-              <% end %>
-            </th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <% if @posts.any? %>
-            <% @posts.each do |post| %>
-            <tr class="hover:bg-gray-50">
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                <% if post.platform_url %>
-                  <%= link_to post.platform_url, target: "_blank", rel: "noopener noreferrer", class: "text-blue-600 hover:text-blue-800 hover:underline" do %>
-                    <%= post.posted_at.strftime('%b %d, %Y') %>
-                    <br>
-                    <span class="text-xs text-gray-400">
-                      <%= post.posted_at.strftime('%H:%M') %>
-                    </span>
-                  <% end %>
-                <% else %>
-                  <%= post.posted_at.strftime('%b %d, %Y') %>
-                  <br>
-                  <span class="text-xs text-gray-400">
-                    <%= post.posted_at.strftime('%H:%M') %>
-                  </span>
-                <% end %>
-              </td>
-              <td class="px-6 py-4 text-sm text-gray-900">
-                <div class="max-w-md">
-                  <%= post.truncated_content(100) %>
-                  <% if post.external_url %>
-                    <br>
-                    <%= link_to post.external_url, post.external_url, target: "_blank", class: "text-blue-600 hover:text-blue-800 text-xs" %>
-                  <% end %>
-                </div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                  <%= case post.post_type
-                      when 'link' then 'bg-blue-100 text-blue-800'
-                      when 'image' then 'bg-purple-100 text-purple-800'
-                      when 'video' then 'bg-red-100 text-red-800'
-                      else 'bg-gray-100 text-gray-800'
-                      end %>">
-                  <%= post.post_type %>
-                </span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                <%= post.latest_metrics&.likes || 0 %>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                <%= post.latest_metrics&.replies || 0 %>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                <%= post.latest_metrics&.reposts || 0 %>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                <%= post.latest_total_interactions %>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <% if post.overperformance_score_cache.present? %>
-                  <% score = post.overperformance_score_cache %>
-                  <% if post.score_fully_calculated? %>
-                    <!-- Fully calculated score - solid badge -->
-                    <span class="px-2 py-1 rounded-full font-semibold
-                      <%= if score > 150
-                            'bg-green-100 text-green-800'
-                          elsif score > 100
-                            'bg-blue-100 text-blue-800'
-                          elsif score > 50
-                            'bg-yellow-100 text-yellow-800'
-                          else
-                            'bg-red-100 text-red-800'
-                          end %>">
-                      <%= score.round(1) %>%
-                    </span>
-                  <% else %>
-                    <!-- Fast calculated score - dashed border badge -->
-                    <span class="px-2 py-1 rounded-full font-semibold border-2 border-dashed
-                      <%= if score > 150
-                            'bg-green-50 text-green-700 border-green-300'
-                          elsif score > 100
-                            'bg-blue-50 text-blue-700 border-blue-300'
-                          elsif score > 50
-                            'bg-yellow-50 text-yellow-700 border-yellow-300'
-                          else
-                            'bg-red-50 text-red-700 border-red-300'
-                          end %>"
-                      title="Estimated score (being refined in background)">
-                      ~<%= score.round(1) %>%
-                    </span>
-                  <% end %>
-                <% else %>
-                  <!-- No score calculated yet -->
-                  <span class="text-gray-400 text-xs italic">Calculating...</span>
-                <% end %>
-              </td>
-            </tr>
-          <% end %>
-        <% else %>
-          <tr>
-            <td colspan="8" class="px-6 py-8 text-center text-gray-500">
-              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-              </svg>
-              <p class="mt-2 text-lg">No posts found</p>
-              <p class="mt-1 text-sm">Click "Sync Now" to fetch posts from Bluesky</p>
-            </td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
+<!-- Mobile Filters Offcanvas -->
+<div class="offcanvas offcanvas-start" tabindex="-1" id="filtersOffcanvas">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title">Filters</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
   </div>
-
-  <!-- Pagination -->
-  <% if @posts.any? %>
-    <div class="mt-6">
-      <%= paginate @posts, params: { search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance], sort: params[:sort], direction: params[:direction] } %>
-    </div>
-  <% end %>
-  <% end %> <%# End turbo_frame_tag %>
+  <div class="offcanvas-body">
+    <!-- Same filter form as sidebar -->
+    <%= form_with url: posts_path, method: :get do |f| %>
+      <!-- Filters content (same as sidebar) -->
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Search Content</label>
+        <%= f.text_field :search, value: params[:search], placeholder: "Search posts...", class: "form-control form-control-sm" %>
+      </div>
+      <%= f.submit "Apply Filters", class: "btn btn-primary w-100" %>
+    <% end %>
+  </div>
 </div>

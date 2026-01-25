@@ -1,0 +1,4 @@
+<%# app/views/kaminari/_last_page.html.erb %>
+<li class="page-item">
+  <%= link_to_unless current_page.last?, 'Last »', url, remote: remote, class: 'page-link' %>
+</li>

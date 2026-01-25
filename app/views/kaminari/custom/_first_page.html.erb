@@ -1,0 +1,4 @@
+<%# app/views/kaminari/_first_page.html.erb %>
+<li class="page-item">
+  <%= link_to_unless current_page.first?, '« First', url, remote: remote, class: 'page-link' %>
+</li>

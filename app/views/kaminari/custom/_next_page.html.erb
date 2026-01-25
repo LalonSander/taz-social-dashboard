@@ -1,0 +1,6 @@
+<%# app/views/kaminari/_next_page.html.erb %>
+<li class="page-item <%= 'disabled' if current_page.last? %>">
+  <%= link_to_unless current_page.last?, 'Next ›', url, rel: 'next', remote: remote, class: 'page-link' do %>
+    <span class="page-link">Next ›</span>
+  <% end %>
+</li>

@@ -1,0 +1,91 @@
+/* app/assets/stylesheets/custom.css */
+
+/* Sparkline styles */
+.sparkline {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.sparkline-line {
+  transition: stroke-width 0.2s ease;
+}
+
+.sparkline:hover .sparkline-line {
+  stroke-width: 2;
+}
+
+/* Line clamp utility for truncating text */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for webkit browsers */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 8px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
+}
+
+/* Table hover effect enhancement */
+tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+/* Focus states for accessibility */
+a:focus,
+button:focus,
+input:focus,
+select:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Ensure pagination doesn't wrap awkwardly */
+nav.flex.items-center.gap-1 {
+  flex-wrap: wrap;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 640px) {
+  .line-clamp-2 {
+    -webkit-line-clamp: 1;
+  }
+  
+  table {
+    font-size: 0.875rem;
+  }
+  
+  th, td {
+    padding: 0.5rem 0.75rem !important;
+  }
+}
+
+/* Loading state for sync button */
+button[data-turbo="false"]:active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
+}
+
+/* Sticky header shadow when scrolling */
+thead.sticky {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
