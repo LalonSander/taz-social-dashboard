@@ -268,76 +268,14 @@
     <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
   </div>
   <div class="offcanvas-body">
+    <!-- Same filter form as sidebar -->
     <%= form_with url: posts_path, method: :get do |f| %>
-      <!-- Search -->
+      <!-- Filters content (same as sidebar) -->
       <div class="mb-3">
         <label class="form-label small fw-semibold">Search Content</label>
-        <%= f.text_field :search,
-            value: params[:search],
-            placeholder: "Search posts...",
-            class: "form-control form-control-sm" %>
+        <%= f.text_field :search, value: params[:search], placeholder: "Search posts...", class: "form-control form-control-sm" %>
       </div>
-
-      <!-- Post Type -->
-      <div class="mb-3">
-        <label class="form-label small fw-semibold">Post Type</label>
-        <%= f.select :post_type,
-            options_for_select([
-              ['All Types', 'all'],
-              ['Link', 'link'],
-              ['Image', 'image'],
-              ['Text', 'text'],
-              ['Video', 'video']
-            ], params[:post_type] || 'all'),
-            {},
-            class: "form-select form-select-sm" %>
-      </div>
-
-      <!-- Date Range -->
-      <div class="mb-3">
-        <label class="form-label small fw-semibold">Date Range</label>
-        <div class="mb-2">
-          <label class="form-label small text-muted">From</label>
-          <%= f.date_field :date_from,
-              value: params[:date_from],
-              class: "form-control form-control-sm" %>
-        </div>
-        <div>
-          <label class="form-label small text-muted">To</label>
-          <%= f.date_field :date_to,
-              value: params[:date_to],
-              class: "form-control form-control-sm" %>
-        </div>
-      </div>
-
-      <!-- Minimum Interactions -->
-      <div class="mb-3">
-        <label class="form-label small fw-semibold">Min. Interactions</label>
-        <%= f.number_field :min_interactions,
-            value: params[:min_interactions],
-            placeholder: "e.g. 100",
-            min: 0,
-            class: "form-control form-control-sm" %>
-        <small class="form-text text-muted">Total likes + replies + reposts</small>
-      </div>
-
-      <!-- Minimum Performance -->
-      <div class="mb-3">
-        <label class="form-label small fw-semibold">Min. Performance Score</label>
-        <%= f.number_field :min_performance,
-            value: params[:min_performance],
-            placeholder: "e.g. 150",
-            min: 0,
-            class: "form-control form-control-sm" %>
-        <small class="form-text text-muted">Percentage vs baseline (100% = average)</small>
-      </div>
-
-      <!-- Preserve sort parameters -->
-      <%= f.hidden_field :sort, value: params[:sort] %>
-      <%= f.hidden_field :direction, value: params[:direction] %>
-
-      <!-- Apply Button -->
-      <%= f.submit "Apply Filters", class: "btn btn-primary btn-sm w-100" %>
+      <%= f.submit "Apply Filters", class: "btn btn-primary w-100" %>
     <% end %>
   </div>
 </div>
