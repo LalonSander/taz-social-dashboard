@@ -10,9 +10,25 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_01_25_075645) do
+ActiveRecord::Schema[7.1].define(version: 2026_01_25_121758) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "articles", force: :cascade do |t|
+    t.string "msid", null: false
+    t.string "title", null: false
+    t.text "lead"
+    t.datetime "published_at", null: false
+    t.decimal "predicted_performance_score", precision: 10, scale: 2
+    t.datetime "last_refreshed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "cms_id"
+    t.index ["cms_id"], name: "index_articles_on_cms_id"
+    t.index ["msid"], name: "index_articles_on_msid", unique: true
+    t.index ["predicted_performance_score"], name: "index_articles_on_predicted_performance_score"
+    t.index ["published_at"], name: "index_articles_on_published_at"
+  end
 
   create_table "post_metrics", force: :cascade do |t|
     t.bigint "post_id", null: false
@@ -96,5 +112,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_25_075645) do
   end
 
   add_foreign_key "post_metrics", "posts"
+  add_foreign_key "posts", "articles", on_delete: :nullify
   add_foreign_key "posts", "social_accounts"
 end

@@ -1,3 +1,5 @@
+# app/models/post.rb
+
 class Post < ApplicationRecord
   # Associations
   belongs_to :social_account
@@ -115,6 +117,24 @@ class Post < ApplicationRecord
   # Generate platform URL if not already stored
   def platform_url
     read_attribute(:platform_url) || generate_platform_url
+  end
+
+  # NEW: Extract msid from external_url
+  # Examples:
+  #   https://taz.de/Trump-beim-Weltwirtschaftsforum/!6144278/
+  #   https://taz.de/!6144278
+  #   https://taz.de/!6144278/
+  def extract_msid_from_external_url
+    return nil if external_url.blank?
+
+    Article.extract_msid_from_url(external_url)
+  end
+
+  # NEW: Check if external_url is a taz.de link
+  def taz_article_link?
+    return false if external_url.blank?
+
+    external_url.match?(/taz\.de/i)
   end
 
   private

@@ -1,0 +1,297 @@
+<%# app/views/articles/index.html.erb - COMPLETE FILE WITH TURBO FRAME FIX %>
+
+<div class="d-flex">
+  <!-- Sidebar Filters -->
+  <aside class="sidebar d-none d-lg-block">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h5 class="mb-0">Filters</h5>
+      <%= link_to "Clear All", articles_path, class: "btn btn-sm btn-outline-secondary" %>
+    </div>
+
+    <%= form_with url: articles_path, method: :get, data: { turbo_frame: "articles_table" } do |f| %>
+      <!-- Search -->
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Search</label>
+        <%= f.text_field :search,
+            value: params[:search],
+            placeholder: "Title or MSID...",
+            class: "form-control form-control-sm" %>
+      </div>
+
+      <!-- Date Range -->
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Published Date</label>
+        <div class="mb-2">
+          <label class="form-label small text-muted">From</label>
+          <%= f.date_field :date_from,
+              value: params[:date_from],
+              class: "form-control form-control-sm" %>
+        </div>
+        <div>
+          <label class="form-label small text-muted">To</label>
+          <%= f.date_field :date_to,
+              value: params[:date_to],
+              class: "form-control form-control-sm" %>
+        </div>
+      </div>
+
+      <!-- Prediction Status -->
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Prediction Status</label>
+        <%= f.select :prediction_status,
+            options_for_select([
+              ['All Articles', ''],
+              ['With Predictions', 'with_predictions'],
+              ['Without Predictions', 'without_predictions']
+            ], params[:prediction_status]),
+            {},
+            class: "form-select form-select-sm" %>
+      </div>
+
+      <!-- Posting Status -->
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Posting Status</label>
+        <%= f.select :posting_status,
+            options_for_select([
+              ['All Articles', ''],
+              ['Posted to Social', 'posted'],
+              ['Not Posted Yet', 'not_posted']
+            ], params[:posting_status]),
+            {},
+            class: "form-select form-select-sm" %>
+      </div>
+
+      <!-- Preserve sort parameters -->
+      <%= f.hidden_field :sort, value: params[:sort] %>
+      <%= f.hidden_field :direction, value: params[:direction] %>
+
+      <!-- Apply Button -->
+      <%= f.submit "Apply Filters", class: "btn btn-primary btn-sm w-100" %>
+    <% end %>
+  </aside>
+
+  <!-- Main Content Area -->
+  <div class="main-content flex-grow-1">
+    <!-- Mobile Filter Toggle -->
+    <div class="d-lg-none bg-white border-bottom p-3">
+      <button class="btn btn-outline-secondary btn-sm w-100" type="button" data-bs-toggle="offcanvas" data-bs-target="#filtersOffcanvas">
+        <i class="bi bi-funnel me-2"></i>
+        Filters
+      </button>
+    </div>
+
+    <!-- Table Container -->
+    <%= turbo_frame_tag "articles_table" do %>
+      <div class="table-container">
+        <table class="table table-hover mb-0">
+          <thead class="table-light sticky-top">
+            <tr>
+              <th scope="col" class="text-nowrap">MSID</th>
+              <th scope="col" class="text-nowrap">
+                <%= link_to articles_path(sort: 'published_at', direction: (params[:sort] == 'published_at' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], date_from: params[:date_from], date_to: params[:date_to], prediction_status: params[:prediction_status], posting_status: params[:posting_status]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "articles_table" } do %>
+                  Published
+                  <% if params[:sort] == 'published_at' %>
+                    <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
+                  <% end %>
+                <% end %>
+              </th>
+              <th scope="col">
+                <%= link_to articles_path(sort: 'title', direction: (params[:sort] == 'title' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], date_from: params[:date_from], date_to: params[:date_to], prediction_status: params[:prediction_status], posting_status: params[:posting_status]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "articles_table" } do %>
+                  Title
+                  <% if params[:sort] == 'title' %>
+                    <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
+                  <% end %>
+                <% end %>
+              </th>
+              <th scope="col" class="text-nowrap">
+                <%= link_to articles_path(sort: 'posts_count', direction: (params[:sort] == 'posts_count' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], date_from: params[:date_from], date_to: params[:date_to], prediction_status: params[:prediction_status], posting_status: params[:posting_status]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "articles_table" } do %>
+                  Posts
+                  <% if params[:sort] == 'posts_count' %>
+                    <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
+                  <% end %>
+                <% end %>
+              </th>
+              <th scope="col" class="text-nowrap">
+                <%= link_to articles_path(sort: 'predicted_performance_score', direction: (params[:sort] == 'predicted_performance_score' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], date_from: params[:date_from], date_to: params[:date_to], prediction_status: params[:prediction_status], posting_status: params[:posting_status]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "articles_table" } do %>
+                  Prediction
+                  <% if params[:sort] == 'predicted_performance_score' %>
+                    <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
+                  <% end %>
+                <% end %>
+              </th>
+              <th scope="col" class="text-nowrap">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if @articles.any? %>
+              <% @articles.each do |article| %>
+                <tr>
+                  <td class="text-nowrap">
+                    <%= link_to article.canonical_url, target: "_blank", rel: "noopener noreferrer", class: "text-decoration-none" do %>
+                      <i class="bi bi-box-arrow-up-right me-1 small"></i>
+                      <%= article.msid %>
+                    <% end %>
+                  </td>
+                  <td class="text-nowrap">
+                    <div class="fw-medium"><%= article.published_at.strftime('%b %d') %></div>
+                    <small class="text-muted"><%= article.published_at.strftime('%Y') %></small>
+                  </td>
+                  <td style="max-width: 500px;">
+                    <%= link_to article_path(article), class: "text-decoration-none text-dark", data: { turbo_frame: "_top" } do %>
+                      <div class="fw-semibold"><%= article.truncated_title(80) %></div>
+                      <% if article.lead.present? %>
+                        <small class="text-muted"><%= article.lead.truncate(100) %></small>
+                      <% end %>
+                    <% end %>
+                  </td>
+                  <td class="text-center">
+                    <% if article.posts.any? %>
+                      <%= link_to article_path(article), class: "text-decoration-none", data: { turbo_frame: "_top" } do %>
+                        <span class="badge bg-primary"><%= article.posts.count %></span>
+                      <% end %>
+                    <% else %>
+                      <span class="text-muted">-</span>
+                    <% end %>
+                  </td>
+                  <td class="text-nowrap">
+                    <% if article.predicted_performance_score.present? %>
+                      <span class="badge bg-success">
+                        <%= number_with_precision(article.predicted_performance_score, precision: 1) %>
+                      </span>
+                    <% else %>
+                      <span class="text-muted small">Not calculated</span>
+                    <% end %>
+                  </td>
+                  <td class="text-nowrap">
+                    <%= link_to article_path(article), class: "btn btn-sm btn-outline-primary me-1", title: "View details", data: { turbo_frame: "_top" } do %>
+                      <i class="bi bi-eye"></i>
+                    <% end %>
+
+                    <% if article.has_cms_id? %>
+                      <%= link_to article.cms_edit_url, target: "_blank", rel: "noopener noreferrer", class: "btn btn-sm btn-outline-info me-1", title: "Edit in CMS" do %>
+                        <i class="bi bi-pencil-square"></i>
+                      <% end %>
+                    <% end %>
+
+                    <%= button_to refresh_article_path(article), method: :post, class: "btn btn-sm btn-outline-secondary", title: "Refresh from XML", data: { turbo: false } do %>
+                      <i class="bi bi-arrow-repeat"></i>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            <% else %>
+              <tr>
+                <td colspan="7" class="text-center py-5">
+                  <i class="bi bi-inbox display-4 text-muted"></i>
+                  <p class="mt-3 mb-1 fw-medium">No articles found</p>
+                  <p class="text-muted small">Try adjusting your filters or sync RSS feeds</p>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <% if @articles.any? %>
+        <div class="bg-white border-top p-3">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div class="text-muted small">
+              Showing
+              <span class="fw-semibold"><%= @articles.offset_value + 1 %></span>
+              to
+              <span class="fw-semibold"><%= [@articles.offset_value + @articles.length, @articles.total_count].min %></span>
+              of
+              <span class="fw-semibold"><%= @articles.total_count %></span>
+              articles
+            </div>
+
+            <nav>
+              <%= paginate @articles,
+                  params: {
+                    search: params[:search],
+                    date_from: params[:date_from],
+                    date_to: params[:date_to],
+                    prediction_status: params[:prediction_status],
+                    posting_status: params[:posting_status],
+                    sort: params[:sort],
+                    direction: params[:direction]
+                  },
+                  theme: 'custom' %>
+            </nav>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</div>
+
+<!-- Mobile Filters Offcanvas -->
+<div class="offcanvas offcanvas-start" tabindex="-1" id="filtersOffcanvas">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title">Filters</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <%= form_with url: articles_path, method: :get do |f| %>
+      <!-- Search -->
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Search</label>
+        <%= f.text_field :search,
+            value: params[:search],
+            placeholder: "Title or MSID...",
+            class: "form-control form-control-sm" %>
+      </div>
+
+      <!-- Date Range -->
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Published Date</label>
+        <div class="mb-2">
+          <label class="form-label small text-muted">From</label>
+          <%= f.date_field :date_from,
+              value: params[:date_from],
+              class: "form-control form-control-sm" %>
+        </div>
+        <div>
+          <label class="form-label small text-muted">To</label>
+          <%= f.date_field :date_to,
+              value: params[:date_to],
+              class: "form-control form-control-sm" %>
+        </div>
+      </div>
+
+      <!-- Prediction Status -->
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Prediction Status</label>
+        <%= f.select :prediction_status,
+            options_for_select([
+              ['All Articles', ''],
+              ['With Predictions', 'with_predictions'],
+              ['Without Predictions', 'without_predictions']
+            ], params[:prediction_status]),
+            {},
+            class: "form-select form-select-sm" %>
+      </div>
+
+      <!-- Posting Status -->
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Posting Status</label>
+        <%= f.select :posting_status,
+            options_for_select([
+              ['All Articles', ''],
+              ['Posted to Social', 'posted'],
+              ['Not Posted Yet', 'not_posted']
+            ], params[:posting_status]),
+            {},
+            class: "form-select form-select-sm" %>
+      </div>
+
+      <!-- Preserve sort parameters -->
+      <%= f.hidden_field :sort, value: params[:sort] %>
+      <%= f.hidden_field :direction, value: params[:direction] %>
+
+      <!-- Apply Button -->
+      <%= f.submit "Apply Filters", class: "btn btn-primary btn-sm w-100" %>
+    <% end %>
+  </div>
+</div>

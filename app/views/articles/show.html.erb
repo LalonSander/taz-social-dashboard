@@ -1,0 +1,200 @@
+<%# app/views/articles/show.html.erb - COMPLETE FILE %>
+
+<div class="container-fluid py-4">
+  <!-- Back button and actions -->
+  <div class="mb-4 d-flex justify-content-between align-items-center">
+    <%= link_to articles_path, class: "btn btn-outline-secondary" do %>
+      <i class="bi bi-arrow-left me-2"></i>
+      Back to Articles
+    <% end %>
+
+    <div>
+      <%= link_to @article.canonical_url, target: "_blank", rel: "noopener noreferrer", class: "btn btn-outline-primary me-2" do %>
+        <i class="bi bi-box-arrow-up-right me-2"></i>
+        View on taz.de
+      <% end %>
+
+      <% if @article.has_cms_id? %>
+        <%= link_to @article.cms_edit_url, target: "_blank", rel: "noopener noreferrer", class: "btn btn-outline-info me-2" do %>
+          <i class="bi bi-pencil-square me-2"></i>
+          Edit in CMS
+        <% end %>
+      <% end %>
+
+      <%= button_to refresh_article_path(@article), method: :post, class: "btn btn-primary", data: { turbo: false } do %>
+        <i class="bi bi-arrow-repeat me-2"></i>
+        Refresh from XML
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Article Details Card -->
+  <div class="card mb-4">
+    <div class="card-header bg-white">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <h3 class="mb-2"><%= @article.title %></h3>
+          <div class="text-muted">
+            <span class="me-3">
+              <i class="bi bi-calendar3 me-1"></i>
+              <%= @article.published_datetime %>
+            </span>
+            <span class="me-3">
+              <i class="bi bi-hash me-1"></i>
+              MSID: <%= @article.msid %>
+            </span>
+            <% if @article.cms_id.present? %>
+              <span class="me-3">
+                <i class="bi bi-key me-1"></i>
+                CMS ID: <%= @article.cms_id %>
+              </span>
+            <% end %>
+            <% if @article.last_refreshed_at %>
+              <span class="small">
+                <i class="bi bi-arrow-repeat me-1"></i>
+                Last refreshed: <%= time_ago_in_words(@article.last_refreshed_at) %> ago
+              </span>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="text-end">
+          <% if @article.predicted_performance_score.present? %>
+            <div class="mb-2">
+              <small class="text-muted d-block">Predicted Performance</small>
+              <span class="badge bg-success fs-5">
+                <%= number_with_precision(@article.predicted_performance_score, precision: 1) %>
+              </span>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <% if @article.lead.present? %>
+        <div class="mb-3">
+          <h6 class="text-muted small fw-semibold mb-2">LEAD</h6>
+          <p class="lead"><%= @article.lead %></p>
+        </div>
+      <% end %>
+
+      <div class="row">
+        <div class="col-md-6">
+          <h6 class="text-muted small fw-semibold mb-2">CANONICAL URL</h6>
+          <p>
+            <%= link_to @article.canonical_url, @article.canonical_url, target: "_blank", rel: "noopener noreferrer" %>
+          </p>
+        </div>
+
+        <div class="col-md-6">
+          <h6 class="text-muted small fw-semibold mb-2">SOCIAL MEDIA POSTS</h6>
+          <p>
+            <% if @article.posted? %>
+              <span class="badge bg-primary"><%= @article.posts_count %> post(s)</span>
+            <% else %>
+              <span class="text-muted">Not posted yet</span>
+            <% end %>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Associated Posts -->
+  <div class="card">
+    <div class="card-header bg-white">
+      <h5 class="mb-0">
+        <i class="bi bi-chat-dots me-2"></i>
+        Social Media Posts
+        <% if @posts.any? %>
+          <span class="badge bg-secondary"><%= @posts.count %></span>
+        <% end %>
+      </h5>
+    </div>
+
+    <div class="card-body p-0">
+      <% if @posts.any? %>
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th scope="col">Platform</th>
+                <th scope="col">Posted</th>
+                <th scope="col">Content</th>
+                <th scope="col" class="text-center">Likes</th>
+                <th scope="col" class="text-center">Replies</th>
+                <th scope="col" class="text-center">Reposts</th>
+                <th scope="col" class="text-center">Total</th>
+                <th scope="col" class="text-center">Performance</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @posts.each do |post| %>
+                <tr>
+                  <td>
+                    <span class="badge bg-primary">
+                      <%= post.platform.capitalize %>
+                    </span>
+                  </td>
+                  <td class="text-nowrap">
+                    <% if post.platform_url %>
+                      <%= link_to post.platform_url, target: "_blank", rel: "noopener noreferrer", class: "text-decoration-none" do %>
+                        <div class="fw-medium"><%= post.posted_at.strftime('%b %d') %></div>
+                        <small class="text-muted"><%= post.posted_at.strftime('%H:%M') %></small>
+                      <% end %>
+                    <% else %>
+                      <div class="fw-medium"><%= post.posted_at.strftime('%b %d') %></div>
+                      <small class="text-muted"><%= post.posted_at.strftime('%H:%M') %></small>
+                    <% end %>
+                  </td>
+                  <td style="max-width: 400px;">
+                    <div class="text-truncate">
+                      <%= post.truncated_content(100) %>
+                    </div>
+                  </td>
+                  <td class="text-center fw-semibold">
+                    <%= number_with_delimiter(post.latest_metrics&.likes || 0) %>
+                  </td>
+                  <td class="text-center fw-semibold">
+                    <%= number_with_delimiter(post.latest_metrics&.replies || 0) %>
+                  </td>
+                  <td class="text-center fw-semibold">
+                    <%= number_with_delimiter(post.latest_metrics&.reposts || 0) %>
+                  </td>
+                  <td class="text-center fw-bold">
+                    <%= number_with_delimiter(post.latest_total_interactions) %>
+                  </td>
+                  <td class="text-center">
+                    <% if post.overperformance_score_cache.present? %>
+                      <% score = post.overperformance_score_cache %>
+                      <span class="badge <%= if score >= 150
+                                'bg-success'
+                              elsif score >= 100
+                                'bg-primary'
+                              elsif score >= 50
+                                'bg-warning text-dark'
+                              else
+                                'bg-danger'
+                              end %>">
+                        <%= number_with_precision(score, precision: 1) %>%
+                      </span>
+                    <% else %>
+                      <span class="text-muted">-</span>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="text-center py-5">
+          <i class="bi bi-chat-dots display-4 text-muted"></i>
+          <p class="mt-3 mb-1 fw-medium">No posts yet</p>
+          <p class="text-muted small">This article hasn't been posted to social media</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
