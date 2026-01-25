@@ -8,7 +8,7 @@
       <%= link_to "Clear All", posts_path, class: "btn btn-sm btn-outline-secondary" %>
     </div>
 
-    <%= form_with url: posts_path, method: :get, data: { turbo_frame: "posts_table" } do |f| %>
+    <%= form_with url: posts_path, method: :get do |f| %>
       <!-- Search -->
       <div class="mb-3">
         <label class="form-label small fw-semibold">Search Content</label>
@@ -92,13 +92,12 @@
     </div>
 
     <!-- Table Container -->
-    <%= turbo_frame_tag "posts_table" do %>
       <div class="table-container">
         <table class="table table-hover mb-0">
           <thead class="table-light sticky-top">
             <tr>
               <th scope="col" class="text-nowrap">
-                <%= link_to posts_path(sort: 'posted_at', direction: (params[:sort] == 'posted_at' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "posts_table" } do %>
+                <%= link_to posts_path(sort: 'posted_at', direction: (params[:sort] == 'posted_at' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1",  do %>
                   Date
                   <% if params[:sort] == 'posted_at' %>
                     <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
@@ -108,7 +107,7 @@
               <th scope="col">Content</th>
               <th scope="col" class="text-nowrap">Type</th>
               <th scope="col" class="text-nowrap">
-                <%= link_to posts_path(sort: 'likes', direction: (params[:sort] == 'likes' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "posts_table" } do %>
+                <%= link_to posts_path(sort: 'likes', direction: (params[:sort] == 'likes' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1",  do %>
                   Likes
                   <% if params[:sort] == 'likes' %>
                     <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
@@ -116,7 +115,7 @@
                 <% end %>
               </th>
               <th scope="col" class="text-nowrap">
-                <%= link_to posts_path(sort: 'replies', direction: (params[:sort] == 'replies' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "posts_table" } do %>
+                <%= link_to posts_path(sort: 'replies', direction: (params[:sort] == 'replies' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1",  do %>
                   Replies
                   <% if params[:sort] == 'replies' %>
                     <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
@@ -124,7 +123,7 @@
                 <% end %>
               </th>
               <th scope="col" class="text-nowrap">
-                <%= link_to posts_path(sort: 'reposts', direction: (params[:sort] == 'reposts' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "posts_table" } do %>
+                <%= link_to posts_path(sort: 'reposts', direction: (params[:sort] == 'reposts' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1",  do %>
                   Reposts
                   <% if params[:sort] == 'reposts' %>
                     <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
@@ -132,7 +131,7 @@
                 <% end %>
               </th>
               <th scope="col" class="text-nowrap">
-                <%= link_to posts_path(sort: 'total_interactions', direction: (params[:sort] == 'total_interactions' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "posts_table" } do %>
+                <%= link_to posts_path(sort: 'total_interactions', direction: (params[:sort] == 'total_interactions' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1",  do %>
                   Total
                   <% if params[:sort] == 'total_interactions' %>
                     <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
@@ -141,7 +140,7 @@
               </th>
               <th scope="col" class="text-nowrap">Trend</th>
               <th scope="col" class="text-nowrap">
-                <%= link_to posts_path(sort: 'overperformance', direction: (params[:sort] == 'overperformance' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1", data: { turbo_frame: "posts_table" } do %>
+                <%= link_to posts_path(sort: 'overperformance', direction: (params[:sort] == 'overperformance' && params[:direction] == 'desc') ? 'asc' : 'desc', search: params[:search], post_type: params[:post_type], date_from: params[:date_from], date_to: params[:date_to], min_interactions: params[:min_interactions], min_performance: params[:min_performance]), class: "text-decoration-none text-dark d-flex align-items-center gap-1",  do %>
                   Performance
                   <% if params[:sort] == 'overperformance' %>
                     <i class="bi bi-caret-<%= params[:direction] == 'asc' ? 'up' : 'down' %>-fill small"></i>
@@ -268,14 +267,76 @@
     <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
   </div>
   <div class="offcanvas-body">
-    <!-- Same filter form as sidebar -->
     <%= form_with url: posts_path, method: :get do |f| %>
-      <!-- Filters content (same as sidebar) -->
+      <!-- Search -->
       <div class="mb-3">
         <label class="form-label small fw-semibold">Search Content</label>
-        <%= f.text_field :search, value: params[:search], placeholder: "Search posts...", class: "form-control form-control-sm" %>
+        <%= f.text_field :search,
+            value: params[:search],
+            placeholder: "Search posts...",
+            class: "form-control form-control-sm" %>
       </div>
-      <%= f.submit "Apply Filters", class: "btn btn-primary w-100" %>
+
+      <!-- Post Type -->
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Post Type</label>
+        <%= f.select :post_type,
+            options_for_select([
+              ['All Types', 'all'],
+              ['Link', 'link'],
+              ['Image', 'image'],
+              ['Text', 'text'],
+              ['Video', 'video']
+            ], params[:post_type] || 'all'),
+            {},
+            class: "form-select form-select-sm" %>
+      </div>
+
+      <!-- Date Range -->
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Date Range</label>
+        <div class="mb-2">
+          <label class="form-label small text-muted">From</label>
+          <%= f.date_field :date_from,
+              value: params[:date_from],
+              class: "form-control form-control-sm" %>
+        </div>
+        <div>
+          <label class="form-label small text-muted">To</label>
+          <%= f.date_field :date_to,
+              value: params[:date_to],
+              class: "form-control form-control-sm" %>
+        </div>
+      </div>
+
+      <!-- Minimum Interactions -->
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Min. Interactions</label>
+        <%= f.number_field :min_interactions,
+            value: params[:min_interactions],
+            placeholder: "e.g. 100",
+            min: 0,
+            class: "form-control form-control-sm" %>
+        <small class="form-text text-muted">Total likes + replies + reposts</small>
+      </div>
+
+      <!-- Minimum Performance -->
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Min. Performance Score</label>
+        <%= f.number_field :min_performance,
+            value: params[:min_performance],
+            placeholder: "e.g. 150",
+            min: 0,
+            class: "form-control form-control-sm" %>
+        <small class="form-text text-muted">Percentage vs baseline (100% = average)</small>
+      </div>
+
+      <!-- Preserve sort parameters -->
+      <%= f.hidden_field :sort, value: params[:sort] %>
+      <%= f.hidden_field :direction, value: params[:direction] %>
+
+      <!-- Apply Button -->
+      <%= f.submit "Apply Filters", class: "btn btn-primary btn-sm w-100" %>
     <% end %>
   </div>
 </div>
