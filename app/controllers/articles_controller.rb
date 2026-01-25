@@ -5,6 +5,9 @@ class ArticlesController < ApplicationController
   before_action :set_article, only: %i[show refresh]
 
   def index
+    # Auto-sync if last article is older than 1 hour
+    auto_sync_rss_if_needed
+
     @articles = Article.includes(:posts).all
 
     # Search by title or msid
@@ -70,12 +73,44 @@ class ArticlesController < ApplicationController
     total_new = stats[:homepage][:new] + stats[:social_bot][:new]
     total_errors = stats[:homepage][:errors] + stats[:social_bot][:errors]
 
-    # Also link any unlinked posts to articles
-    linker_stats = PostArticleLinker.link_all_unlinked_posts
+    # Link only recent unlinked posts (last 500) to avoid timeout
+    recent_unlinked_posts = Post.with_links
+                                .order(posted_at: :desc)
+                                .limit(500)
+
+    linker_stats = {
+      linked: 0,
+      already_linked: 0,
+      not_taz_link: 0,
+      no_msid: 0,
+      article_not_found: 0,
+      article_created: 0,
+      errors: 0
+    }
+
+    recent_unlinked_posts.each do |post|
+      next unless post.taz_article_link?
+
+      msid = post.extract_msid_from_external_url
+      next unless msid
+
+      article = Article.find_by(msid: msid)
+
+      # Create article from XML if not found
+      unless article
+        article_data = Taz::XmlScraper.scrape_article(msid)
+        if article_data
+          article = Article.create(article_data)
+          linker_stats[:article_created] += 1 if article.persisted?
+        end
+      end
+
+      linker_stats[:linked] += 1 if article && post.update(article: article)
+    end
 
     if total_errors.zero? && linker_stats[:errors].zero?
       redirect_to articles_path,
-                  notice: "RSS sync completed! #{total_new} new articles imported. #{linker_stats[:linked]} posts linked to articles."
+                  notice: "RSS sync completed! #{total_new} new articles imported. #{linker_stats[:linked]} posts linked (from 500 most recent)."
     else
       redirect_to articles_path,
                   alert: "RSS sync completed with #{total_errors} errors. #{linker_stats[:errors]} linking errors."
@@ -94,5 +129,25 @@ class ArticlesController < ApplicationController
 
   def set_article
     @article = Article.find(params[:id])
+  end
+
+  def auto_sync_rss_if_needed
+    last_sync = Article.maximum(:created_at)
+
+    # If no articles OR last article created more than 1 hour ago
+    return unless last_sync.nil? || last_sync < 1.hour.ago
+
+    Rails.logger.info "Auto-syncing RSS feeds (last sync: #{last_sync})"
+
+    # Run sync in background thread to not block page load
+    Thread.new do
+      ActiveRecord::Base.connection_pool.with_connection do
+        importer = Taz::RssImporter.new
+        importer.import_all
+
+        # Link posts after import
+        PostArticleLinker.link_all_unlinked_posts
+      end
+    end
   end
 end

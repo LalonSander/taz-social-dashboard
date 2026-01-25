@@ -1,3 +1,5 @@
+<%# app/views/layouts/application.html.erb - COMPLETE FIXED FILE %>
+
 <!DOCTYPE html>
 <html>
   <head>
@@ -56,21 +58,35 @@
         </span>
 
         <div class="d-flex align-items-center">
-          <% if user_signed_in? %>
-            <% if defined?(@last_sync) && @last_sync %>
-              <span class="text-muted small me-3 d-none d-sm-inline">
-                Last synced: <%= time_ago_in_words(@last_sync) %> ago
-              </span>
-            <% end %>
+          <!-- Navigation Links -->
+          <%= link_to "Posts", posts_path, class: "btn btn-sm #{controller_name == 'posts' ? 'btn-primary' : 'btn-outline-secondary'} me-2" %>
+          <%= link_to "Articles", articles_path, class: "btn btn-sm #{controller_name == 'articles' ? 'btn-primary' : 'btn-outline-secondary'} me-2" %>
 
-            <% if defined?(@last_sync) %>
+          <% if user_signed_in? %>
+            <!-- Show appropriate sync info and button based on current controller -->
+            <% if controller_name == 'posts' %>
+              <% if defined?(@last_sync) && @last_sync %>
+                <span class="text-muted small me-3 d-none d-sm-inline">
+                  Last synced: <%= time_ago_in_words(@last_sync) %> ago
+                </span>
+              <% end %>
               <%= button_to sync_posts_path, method: :post, class: "btn btn-primary btn-sm me-2", data: { turbo: false } do %>
                 <i class="bi bi-arrow-repeat"></i>
-                <span class="d-none d-sm-inline ms-1">Sync</span>
+                <span class="d-none d-sm-inline ms-1">Sync Posts</span>
+              <% end %>
+            <% elsif controller_name == 'articles' %>
+              <% if defined?(@last_rss_sync) && @last_rss_sync %>
+                <span class="text-muted small me-3 d-none d-sm-inline">
+                  Last article: <%= time_ago_in_words(@last_rss_sync) %> ago
+                </span>
+              <% end %>
+              <%= button_to sync_articles_path, method: :post, class: "btn btn-primary btn-sm me-2", data: { turbo: false } do %>
+                <i class="bi bi-arrow-repeat"></i>
+                <span class="d-none d-sm-inline ms-1">Sync RSS</span>
               <% end %>
             <% end %>
 
-            <%= link_to "Sign out", destroy_user_session_path, method: :delete, class: "btn btn-outline-secondary btn-sm" %>
+            <%= link_to "Sign out", destroy_user_session_path, data: { turbo_method: :delete }, class: "btn btn-outline-secondary btn-sm" %>
           <% end %>
         </div>
       </div>
