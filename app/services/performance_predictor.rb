@@ -47,10 +47,14 @@ class PerformancePredictor
 
   # Find articles similar to target article
   def find_similar_articles
-    # Get candidate articles from last 3 months with posts
+    # Get candidate articles from 3 months BEFORE the target article's publication
+    # This simulates what we would have known at the time of prediction
+    cutoff_date = @article.published_at - MAX_ARTICLE_AGE_MONTHS.months
+
     candidates = Article
                  .joins(:posts)
-                 .where('articles.published_at > ?', MAX_ARTICLE_AGE_MONTHS.months.ago)
+                 .where('articles.published_at > ?', cutoff_date)
+                 .where('articles.published_at < ?', @article.published_at) # Only past articles
                  .where.not(id: @article.id)
                  .distinct
 

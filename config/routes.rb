@@ -31,4 +31,6 @@ Rails.application.routes.draw do
 
   # Health check (optional, useful for deployment)
   get 'up' => 'rails/health#show', as: :rails_health_check
+
+  get 'analysis/predictions', to: 'analysis#predictions'
 end

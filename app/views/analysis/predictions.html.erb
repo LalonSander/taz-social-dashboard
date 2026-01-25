@@ -1,0 +1,321 @@
+<%# app/views/analysis/predictions.html.erb - ADD CLASSIFICATION SECTION %>
+
+<div class="container-fluid py-4">
+  <div class="mb-4">
+    <h2>Prediction Accuracy Analysis</h2>
+    <p class="text-muted">Comparing predicted performance vs. actual best post performance</p>
+  </div>
+
+  <!-- Regression Statistics Cards -->
+  <h5 class="mb-3">Regression Metrics (Exact Values)</h5>
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <h6 class="text-muted small">Total Articles</h6>
+          <h3><%= @total_articles %></h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <h6 class="text-muted small">Mean Absolute Error</h6>
+          <h3><%= number_with_precision(@mae, precision: 1) %>%</h3>
+          <small class="text-muted">Lower is better</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <h6 class="text-muted small">Correlation</h6>
+          <h3><%= number_with_precision(@correlation, precision: 3) %></h3>
+          <small class="text-muted">Closer to 1 is better</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <h6 class="text-muted small">RMSE</h6>
+          <h3><%= number_with_precision(@rmse, precision: 1) %>%</h3>
+          <small class="text-muted">Root Mean Squared Error</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Classification Statistics Cards -->
+  <h5 class="mb-3">Classification Metrics (Above/Below 100%)</h5>
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card border-success">
+        <div class="card-body">
+          <h6 class="text-muted small">Accuracy</h6>
+          <h3 class="text-success"><%= @accuracy %>%</h3>
+          <small class="text-muted">Correct predictions</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <h6 class="text-muted small">Precision</h6>
+          <h3><%= @precision %>%</h3>
+          <small class="text-muted">When predicting above 100%</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <h6 class="text-muted small">Recall</h6>
+          <h3><%= @recall %>%</h3>
+          <small class="text-muted">Found above 100% articles</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <h6 class="text-muted small">F1 Score</h6>
+          <h3><%= @f1_score %>%</h3>
+          <small class="text-muted">Balanced metric</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confusion Matrix -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">Confusion Matrix</h5>
+        </div>
+        <div class="card-body">
+          <table class="table table-bordered text-center mb-0">
+            <thead>
+              <tr>
+                <th></th>
+                <th colspan="2">Actual</th>
+              </tr>
+              <tr>
+                <th>Predicted</th>
+                <th>Above 100%</th>
+                <th>Below 100%</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th>Above 100%</th>
+                <td class="bg-success bg-opacity-25">
+                  <strong><%= @true_positives %></strong>
+                  <br><small class="text-muted">True Positives</small>
+                </td>
+                <td class="bg-danger bg-opacity-25">
+                  <strong><%= @false_positives %></strong>
+                  <br><small class="text-muted">False Positives</small>
+                </td>
+              </tr>
+              <tr>
+                <th>Below 100%</th>
+                <td class="bg-danger bg-opacity-25">
+                  <strong><%= @false_negatives %></strong>
+                  <br><small class="text-muted">False Negatives</small>
+                </td>
+                <td class="bg-success bg-opacity-25">
+                  <strong><%= @true_negatives %></strong>
+                  <br><small class="text-muted">True Negatives</small>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">What This Means</h5>
+        </div>
+        <div class="card-body">
+          <dl>
+            <dt>Accuracy (<%= @accuracy %>%)</dt>
+            <dd>How often we correctly predict above/below average performance</dd>
+
+            <dt>Precision (<%= @precision %>%)</dt>
+            <dd>When we predict "above average", how often is it actually above average?</dd>
+
+            <dt>Recall (<%= @recall %>%)</dt>
+            <dd>Of all articles that performed above average, how many did we catch?</dd>
+
+            <dt>F1 Score (<%= @f1_score %>%)</dt>
+            <dd>Harmonic mean of precision and recall - overall effectiveness</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scatter Plot -->
+  <div class="card mb-4">
+    <div class="card-header bg-white">
+      <h5 class="mb-0">Predicted vs Actual Performance</h5>
+    </div>
+    <div class="card-body">
+      <canvas id="scatterChart" width="800" height="500"></canvas>
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="card">
+    <div class="card-header bg-white">
+      <h5 class="mb-0">Detailed Data</h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Article</th>
+              <th class="text-center">Predicted</th>
+              <th class="text-center">Actual (Best)</th>
+              <th class="text-center">Error</th>
+              <th class="text-center">Classification</th>
+              <th class="text-center">Posts</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @data_points.each do |point| %>
+              <tr>
+                <td>
+                  <%= link_to article_path(point[:article_id]) do %>
+                    <%= point[:article_title] %>
+                  <% end %>
+                </td>
+                <td class="text-center">
+                  <span class="badge <%= point[:predicted] > 100 ? 'bg-success' : 'bg-secondary' %>">
+                    <%= number_with_precision(point[:predicted], precision: 1) %>%
+                  </span>
+                </td>
+                <td class="text-center">
+                  <span class="badge <%= point[:actual] > 100 ? 'bg-success' : 'bg-secondary' %>">
+                    <%= number_with_precision(point[:actual], precision: 1) %>%
+                  </span>
+                </td>
+                <td class="text-center">
+                  <% error = (point[:predicted] - point[:actual]).abs %>
+                  <span class="badge <%= error < 20 ? 'bg-success' : error < 50 ? 'bg-warning' : 'bg-danger' %>">
+                    <%= number_with_precision(error, precision: 1) %>%
+                  </span>
+                </td>
+                <td class="text-center">
+                  <% correct = point[:predicted_above] == point[:actual_above] %>
+                  <span class="badge <%= correct ? 'bg-success' : 'bg-danger' %>">
+                    <%= correct ? '✓ Correct' : '✗ Wrong' %>
+                  </span>
+                </td>
+                <td class="text-center"><%= point[:posts_count] %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+  const data = <%= raw @data_points.to_json %>;
+
+  const ctx = document.getElementById('scatterChart').getContext('2d');
+
+  new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: 'Articles',
+        data: data.map(d => ({
+          x: d.predicted,
+          y: d.actual,
+          title: d.article_title
+        })),
+        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1,
+        pointRadius: 5,
+        pointHoverRadius: 7
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        title: {
+          display: true,
+          text: 'Predicted vs Actual Performance',
+          font: { size: 16 }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return [
+                `Predicted: ${context.parsed.x.toFixed(1)}%`,
+                `Actual: ${context.parsed.y.toFixed(1)}%`,
+                `Article: ${context.raw.title}`
+              ];
+            }
+          }
+        },
+        legend: {
+          display: false
+        }
+      },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: 'Predicted Performance (%)',
+            font: { size: 14 }
+          },
+          min: 0
+        },
+        y: {
+          title: {
+            display: true,
+            text: 'Actual Performance (%) - Best Post',
+            font: { size: 14 }
+          },
+          min: 0
+        }
+      }
+    }
+  });
+
+  // Add diagonal reference line (perfect prediction)
+  const chartArea = ctx.canvas.getBoundingClientRect();
+  const maxValue = Math.max(
+    ...data.map(d => Math.max(d.predicted, d.actual))
+  );
+
+  new Chart(ctx.canvas, {
+    type: 'line',
+    data: {
+      datasets: [{
+        label: 'Perfect Prediction',
+        data: [{x: 0, y: 0}, {x: maxValue, y: maxValue}],
+        borderColor: 'rgba(255, 99, 132, 0.5)',
+        borderWidth: 2,
+        borderDash: [5, 5],
+        pointRadius: 0,
+        fill: false
+      }]
+    }
+  });
+</script>
