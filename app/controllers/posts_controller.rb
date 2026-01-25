@@ -4,7 +4,13 @@ class PostsController < ApplicationController
   before_action :authenticate_user!
 
   def index
-    @posts = Post.includes(:social_account, :post_metrics)
+    # Auto-sync if it's been more than 1 hour since last sync
+    auto_sync_if_needed
+
+    @posts = Post
+             .joins(:social_account)
+             .includes(:social_account, :post_metrics)
+             .where("posts.platform_url ILIKE '%' || social_accounts.handle || '%'")
 
     # Search
     @posts = @posts.where("content ILIKE ?", "%#{params[:search]}%") if params[:search].present?
@@ -36,78 +42,39 @@ class PostsController < ApplicationController
       @posts = @posts.where('overperformance_score_cache >= ?', min_perf)
     end
 
+    # IMPORTANT: Calculate scores for all posts in the current result set BEFORE sorting
+    # This ensures accurate sorting by overperformance
+    ensure_scores_for_sorting if params[:sort] == 'overperformance'
+
     # Sorting
     sort_column = params[:sort] || 'posted_at'
     sort_direction = params[:direction] || 'desc'
 
-    # Only apply database sorting if NOT filtering by performance
-    # (performance filter requires in-memory filtering, so sort happens later)
-    unless @filtered_by_performance
-      case sort_column
-      when 'posted_at'
-        @posts = @posts.order("posted_at #{sort_direction}")
-      when 'likes', 'replies', 'reposts', 'total_interactions'
-        # Join with latest metrics for sorting
-        @posts = @posts
-                 .joins("LEFT JOIN LATERAL (
-            SELECT * FROM post_metrics
-            WHERE post_metrics.post_id = posts.id
-            ORDER BY recorded_at DESC
-            LIMIT 1
-          ) latest_metrics ON true")
-                 .order("latest_metrics.#{sort_column} #{sort_direction} NULLS LAST")
-      when 'overperformance'
-        # This is complex, we'll calculate it in memory after fetching
-        # For now, just sort by total interactions as a proxy
-        @posts = @posts
-                 .joins("LEFT JOIN LATERAL (
-            SELECT * FROM post_metrics
-            WHERE post_metrics.post_id = posts.id
-            ORDER BY recorded_at DESC
-            LIMIT 1
-          ) latest_metrics ON true")
-                 .order("latest_metrics.total_interactions #{sort_direction} NULLS LAST")
-      else
-        @posts = @posts.order("posted_at #{sort_direction}")
-      end
+    case sort_column
+    when 'posted_at'
+      @posts = @posts.order("posted_at #{sort_direction}")
+    when 'likes', 'replies', 'reposts', 'total_interactions'
+      # Join with latest metrics for sorting
+      @posts = @posts
+               .joins("LEFT JOIN LATERAL (
+          SELECT * FROM post_metrics
+          WHERE post_metrics.post_id = posts.id
+          ORDER BY recorded_at DESC
+          LIMIT 1
+        ) latest_metrics ON true")
+               .order("latest_metrics.#{sort_column} #{sort_direction} NULLS LAST")
+    when 'overperformance'
+      # Sort by cached overperformance score
+      @posts = @posts.order("overperformance_score_cache #{sort_direction} NULLS LAST")
+    else
+      @posts = @posts.order("posted_at #{sort_direction}")
     end
 
     # Apply pagination
-    if @filtered_by_performance
-      # Performance filter requires in-memory filtering, so paginate manually
-      # Also apply sorting here since we skipped it above
-      case sort_column
-      when 'posted_at'
-        @posts_with_performance.sort_by! { |p| p.posted_at }
-        @posts_with_performance.reverse! if sort_direction == 'desc'
-      when 'likes'
-        @posts_with_performance.sort_by! { |p| p.latest_metrics&.likes || 0 }
-        @posts_with_performance.reverse! if sort_direction == 'desc'
-      when 'replies'
-        @posts_with_performance.sort_by! { |p| p.latest_metrics&.replies || 0 }
-        @posts_with_performance.reverse! if sort_direction == 'desc'
-      when 'reposts'
-        @posts_with_performance.sort_by! { |p| p.latest_metrics&.reposts || 0 }
-        @posts_with_performance.reverse! if sort_direction == 'desc'
-      when 'total_interactions'
-        @posts_with_performance.sort_by! { |p| p.latest_total_interactions }
-        @posts_with_performance.reverse! if sort_direction == 'desc'
-      when 'overperformance'
-        @posts_with_performance.sort_by! { |p| p.overperformance_score }
-        @posts_with_performance.reverse! if sort_direction == 'desc'
-      end
+    @posts = @posts.page(params[:page]).per(25)
 
-      total_count = @posts_with_performance.size
-      page = (params[:page] || 1).to_i
-      per_page = 25
-      offset = (page - 1) * per_page
-
-      @posts = Kaminari.paginate_array(@posts_with_performance, total_count: total_count)
-                       .page(page)
-                       .per(per_page)
-    else
-      @posts = @posts.page(params[:page]).per(25)
-    end
+    # Calculate scores for posts on this page that need them
+    calculate_scores_for_visible_posts
 
     # Get last sync time for all Bluesky accounts
     @last_sync = SocialAccount.bluesky.active.maximum(:last_synced_at)
@@ -127,12 +94,15 @@ class PostsController < ApplicationController
 
     @accounts.each do |account|
       service = SocialPlatform::Bluesky.new(account)
-      result = service.sync
+      result = service.fast_sync
 
       if result[:success]
         total_new_posts += result[:new_posts]
         total_updated_metrics += result[:updated_metrics]
         account.update!(last_synced_at: result[:synced_at])
+
+        # Spawn background thread for slow backfill
+        spawn_background_backfill(account)
       else
         errors << "#{account.display_name}: #{result[:error]}"
       end
@@ -140,9 +110,82 @@ class PostsController < ApplicationController
 
     if errors.empty?
       redirect_to posts_path,
-                  notice: "Sync completed! #{total_new_posts} new posts, #{total_updated_metrics} metrics updated."
+                  notice: "Sync completed! #{total_new_posts} new posts, #{total_updated_metrics} posts updated. Background processing continues..."
     else
       redirect_to posts_path, alert: "Sync completed with errors: #{errors.join('; ')}"
+    end
+  end
+
+  private
+
+  def auto_sync_if_needed
+    accounts = SocialAccount.bluesky.active
+    return if accounts.empty?
+
+    # Check if any account needs sync
+    accounts_needing_sync = accounts.select(&:needs_sync?)
+    return if accounts_needing_sync.empty?
+
+    # Perform fast sync for accounts that need it
+    accounts_needing_sync.each do |account|
+      service = SocialPlatform::Bluesky.new(account)
+      result = service.fast_sync
+
+      if result[:success]
+        account.update!(last_synced_at: result[:synced_at])
+        # Spawn background thread for slow backfill
+        spawn_background_backfill(account)
+      end
+    rescue StandardError => e
+      Rails.logger.error "Auto-sync failed for #{account.handle}: #{e.message}"
+    end
+  end
+
+  def ensure_scores_for_sorting
+    # When sorting by overperformance, we need to ensure all posts have scores
+    # Get a sample of posts to check (limit to avoid loading everything)
+    sample_posts = @posts.limit(100).to_a
+    posts_without_scores = sample_posts.select { |p| p.overperformance_score_cache.nil? }
+
+    return if posts_without_scores.empty?
+
+    # Calculate fast scores for posts without scores
+    posts_without_scores.group_by(&:social_account).each do |account, posts|
+      # Ensure baseline exists
+      account.calculate_and_cache_baseline! if account.baseline_interactions_average.nil?
+
+      # Calculate fast scores
+      posts.each do |post|
+        post.calculate_fast_overperformance_score if account.baseline_interactions_average.present?
+      end
+    end
+  end
+
+  def calculate_scores_for_visible_posts
+    # Find posts on current page that don't have a score yet
+    posts_needing_scores = @posts.select { |p| p.overperformance_score_cache.nil? }
+    return if posts_needing_scores.empty?
+
+    # Group by account to use cached baseline
+    posts_needing_scores.group_by(&:social_account).each do |account, posts|
+      # Ensure baseline exists
+      account.calculate_and_cache_baseline! if account.baseline_interactions_average.nil?
+
+      # Calculate fast scores for these posts
+      posts.each do |post|
+        post.calculate_fast_overperformance_score if account.baseline_interactions_average.present?
+      end
+    end
+  end
+
+  def spawn_background_backfill(account)
+    Thread.new do
+      ActiveRecord::Base.connection_pool.with_connection do
+        service = SocialPlatform::Bluesky.new(account)
+        service.slow_backfill
+      rescue StandardError => e
+        Rails.logger.error "Background backfill failed for #{account.handle}: #{e.message}"
+      end
     end
   end
 end

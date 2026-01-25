@@ -15,18 +15,18 @@ module SocialPlatform
       @access_token = @account.access_token
     end
 
-    # Main sync method: fetch new posts and update metrics
-    def sync
+    # Fast sync: fetch new posts and update recent metrics (last 24 hours only)
+    # This method is designed to return quickly (under 15 seconds)
+    def fast_sync
       authenticate unless @access_token
 
       new_posts_count = fetch_and_save_posts
-      result = update_recent_metrics
+      updated_metrics_count = update_recent_metrics_from_feed
 
       {
         success: true,
         new_posts: new_posts_count,
-        updated_metrics: result[:updated],
-        skipped_metrics: result[:skipped],
+        updated_metrics: updated_metrics_count,
         synced_at: Time.current
       }
     rescue AuthenticationError => e
@@ -61,6 +61,33 @@ module SocialPlatform
       { success: false, error: "An unexpected error occurred." }
     end
 
+    # Slow backfill: update older posts and calculate accurate scores
+    # This runs in the background and can take several minutes
+    def slow_backfill
+      Rails.logger.info "Starting slow backfill for #{@account.handle}"
+
+      # Step 1: Recalculate baseline if needed
+      if @account.needs_baseline_recalculation?
+        @account.calculate_and_cache_baseline!
+        Rails.logger.info "Baseline recalculated: #{@account.baseline_interactions_average}"
+      end
+
+      # Step 2: Calculate fast scores for recent posts that don't have ANY score yet
+      calculate_fast_scores_for_posts_without_scores
+
+      # Step 3: Update metrics for 10-20 older posts (gradual backfill)
+      backfill_older_posts(limit: 15)
+
+      # Step 4: Calculate full scores ONLY for posts where metrics changed
+      calculate_full_scores_for_changed_posts(limit: 20)
+
+      Rails.logger.info "Slow backfill completed for #{@account.handle}"
+      { success: true }
+    rescue StandardError => e
+      Rails.logger.error "Slow backfill failed for #{@account.handle}: #{e.message}\n#{e.backtrace.join("\n")}"
+      { success: false, error: e.message }
+    end
+
     private
 
     # Authenticate and get access token
@@ -92,6 +119,7 @@ module SocialPlatform
     def fetch_and_save_posts
       posts_count = 0
       cursor = nil
+      @recently_updated_post_ids = Set.new
 
       # Fetch up to 100 posts (Bluesky's max per request)
       loop do
@@ -106,7 +134,12 @@ module SocialPlatform
           post_data = extract_post_data(feed_item)
           next unless post_data
 
-          posts_count += 1 if save_post(post_data)
+          next unless save_post(post_data)
+
+          posts_count += 1
+          # Track that we updated this post
+          post = Post.find_by(platform: 'bluesky', platform_post_id: post_data[:platform_post_id])
+          @recently_updated_post_ids.add(post.id) if post
         end
 
         # Check if there are more posts
@@ -190,6 +223,9 @@ module SocialPlatform
       # (we'll update metrics separately for recent posts)
       return false if post.persisted? && post.posted_at < 30.days.ago
 
+      is_new_post = post.new_record?
+      old_total_interactions = post.latest_total_interactions unless is_new_post
+
       post.assign_attributes(
         social_account: @account,
         content: post_data[:content],
@@ -197,14 +233,20 @@ module SocialPlatform
         platform_url: post_data[:platform_url],
         post_type: post_data[:post_type],
         posted_at: post_data[:posted_at],
-        platform_data: post_data[:platform_data]
+        platform_data: post_data[:platform_data],
+        metrics_updated_at: Time.current
       )
+
+      # Only reset score status if it's a new post
+      post.score_calculation_status = 'not_calculated' if is_new_post
 
       if post.save
         # Create or update metrics for the current hour
         current_hour = Time.current.beginning_of_hour
 
         metric = post.post_metrics.find_or_initialize_by(recorded_at: current_hour)
+        new_total = post_data[:likes] + post_data[:replies] + post_data[:reposts] + post_data[:quotes]
+
         metric.assign_attributes(
           likes: post_data[:likes],
           replies: post_data[:replies],
@@ -213,6 +255,11 @@ module SocialPlatform
         )
         metric.save!
 
+        # If metrics changed for existing post, mark for recalculation
+        if !is_new_post && (old_total_interactions != new_total)
+          post.update_column(:score_calculation_status, 'not_calculated')
+        end
+
         true
       else
         Rails.logger.error "Failed to save post #{post_data[:platform_post_id]}: #{post.errors.full_messages.join(', ')}"
@@ -220,19 +267,29 @@ module SocialPlatform
       end
     end
 
-    # Update metrics for posts from the last 30 days
-    def update_recent_metrics
-      recent_posts = @account.posts.where('posted_at > ?', 30.days.ago)
+    # Update metrics for recent posts using data already in the feed response
+    # This avoids making individual API calls for each post
+    def update_recent_metrics_from_feed
+      # We already have metric data from fetch_and_save_posts
+      # Just need to update posts from last 24 hours that weren't in the new fetch
+
+      recent_posts = @account.posts.from_last_24_hours
       updated_count = 0
 
-      recent_posts.find_each do |post|
-        updated_count += 1 if update_post_metrics(post)
+      # Track which posts we've already updated during fetch
+      @recently_updated_post_ids ||= Set.new
 
-        # Add small delay to avoid rate limiting
-        sleep(0.1) if updated_count % 10 == 0
+      recent_posts.each do |post|
+        next if @recently_updated_post_ids.include?(post.id)
+
+        # For posts not in the recent fetch, we need to update them
+        # But we'll do this more efficiently in slow_backfill
+        # For now, just mark them as needing updates
+        post.update_column(:score_calculation_status, 'not_calculated')
+        updated_count += 1
       end
 
-      { updated: updated_count, skipped: 0 }
+      updated_count
     end
 
     # Update metrics for a specific post
@@ -253,6 +310,14 @@ module SocialPlatform
 
       # Find or create metric for this hour
       metric = post.post_metrics.find_or_initialize_by(recorded_at: current_hour)
+
+      new_total = (thread_post['likeCount'] || 0) +
+                  (thread_post['replyCount'] || 0) +
+                  (thread_post['repostCount'] || 0) +
+                  (thread_post['quoteCount'] || 0)
+
+      old_total = post.latest_total_interactions
+
       metric.assign_attributes(
         likes: thread_post['likeCount'] || 0,
         replies: thread_post['replyCount'] || 0,
@@ -260,11 +325,18 @@ module SocialPlatform
         quotes: thread_post['quoteCount'] || 0
       )
 
-      was_new = metric.new_record?
       metric.save!
 
-      # Recalculate and cache overperformance score
-      post.calculate_and_cache_overperformance_score! if post.posted_at > 30.days.ago
+      # Update the post's metrics_updated_at
+      # If metrics changed, mark for score recalculation
+      if new_total == old_total
+        post.update_column(:metrics_updated_at, Time.current)
+      else
+        post.update_columns(
+          metrics_updated_at: Time.current,
+          score_calculation_status: 'not_calculated'
+        )
+      end
 
       true
     end
@@ -347,6 +419,63 @@ module SocialPlatform
       else
         raise ApiError, "Unexpected response code: #{response.code}"
       end
+    end
+
+    # Calculate fast scores for posts that have NO score at all
+    def calculate_fast_scores_for_posts_without_scores
+      posts = @account.posts
+                      .where(overperformance_score_cache: nil)
+                      .from_last_24_hours
+                      .limit(50)
+
+      posts.each do |post|
+        post.calculate_fast_overperformance_score
+      end
+
+      Rails.logger.info "Calculated fast scores for #{posts.size} posts without any score"
+    end
+
+    # Backfill metrics for older posts (10-20 at a time)
+    def backfill_older_posts(limit: 15)
+      # Find posts that haven't been updated recently
+      # Prioritize posts from last 7 days, then older posts
+      posts_to_update = @account.posts
+                                .older_than_24_hours
+                                .needs_metric_update(24.hours.ago)
+                                .order('metrics_updated_at ASC NULLS FIRST')
+                                .limit(limit)
+
+      updated_count = 0
+      posts_to_update.each do |post|
+        updated_count += 1 if update_post_metrics(post)
+
+        # Small delay to respect rate limits
+        sleep(0.1) if updated_count % 5 == 0
+      end
+
+      Rails.logger.info "Backfilled metrics for #{updated_count} older posts"
+      updated_count
+    end
+
+    # Calculate full accurate scores ONLY for posts where metrics changed
+    def calculate_full_scores_for_changed_posts(limit: 20)
+      posts = @account.posts
+                      .where(score_calculation_status: 'not_calculated')
+                      .where.not(overperformance_score_cache: nil) # Has a score but marked as needing recalc
+                      .order(posted_at: :desc)
+                      .limit(limit)
+
+      posts.each do |post|
+        # Only recalculate if metrics actually changed
+        if post.metrics_changed?
+          post.calculate_and_cache_overperformance_score!
+        else
+          # Metrics haven't changed, just update the status to fully_calculated
+          post.update_column(:score_calculation_status, 'fully_calculated')
+        end
+      end
+
+      Rails.logger.info "Calculated full scores for #{posts.size} posts with changed metrics"
     end
   end
 end

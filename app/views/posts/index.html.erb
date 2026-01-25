@@ -272,20 +272,39 @@
               <td class="px-6 py-4 whitespace-nowrap text-sm">
                 <% if post.overperformance_score_cache.present? %>
                   <% score = post.overperformance_score_cache %>
-                  <span class="px-2 py-1 rounded-full font-semibold
-                    <%= if score > 150
-                          'bg-green-100 text-green-800'
-                        elsif score > 100
-                          'bg-blue-100 text-blue-800'
-                        elsif score > 50
-                          'bg-yellow-100 text-yellow-800'
-                        else
-                          'bg-red-100 text-red-800'
-                        end %>">
-                    <%= score.round(1) %>%
-                  </span>
+                  <% if post.score_fully_calculated? %>
+                    <!-- Fully calculated score - solid badge -->
+                    <span class="px-2 py-1 rounded-full font-semibold
+                      <%= if score > 150
+                            'bg-green-100 text-green-800'
+                          elsif score > 100
+                            'bg-blue-100 text-blue-800'
+                          elsif score > 50
+                            'bg-yellow-100 text-yellow-800'
+                          else
+                            'bg-red-100 text-red-800'
+                          end %>">
+                      <%= score.round(1) %>%
+                    </span>
+                  <% else %>
+                    <!-- Fast calculated score - dashed border badge -->
+                    <span class="px-2 py-1 rounded-full font-semibold border-2 border-dashed
+                      <%= if score > 150
+                            'bg-green-50 text-green-700 border-green-300'
+                          elsif score > 100
+                            'bg-blue-50 text-blue-700 border-blue-300'
+                          elsif score > 50
+                            'bg-yellow-50 text-yellow-700 border-yellow-300'
+                          else
+                            'bg-red-50 text-red-700 border-red-300'
+                          end %>"
+                      title="Estimated score (being refined in background)">
+                      ~<%= score.round(1) %>%
+                    </span>
+                  <% end %>
                 <% else %>
-                  <span class="text-gray-400 text-xs">-</span>
+                  <!-- No score calculated yet -->
+                  <span class="text-gray-400 text-xs italic">Calculating...</span>
                 <% end %>
               </td>
             </tr>

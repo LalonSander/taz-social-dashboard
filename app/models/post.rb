@@ -19,6 +19,12 @@ class Post < ApplicationRecord
     video: 'video'
   }
 
+  enum score_calculation_status: {
+    not_calculated: 'not_calculated',
+    fast_calculated: 'fast_calculated',
+    fully_calculated: 'fully_calculated'
+  }, _prefix: :score
+
   # Validations
   validates :platform, presence: true
   validates :platform_post_id, presence: true, uniqueness: { scope: :platform }
@@ -31,6 +37,10 @@ class Post < ApplicationRecord
   scope :with_articles, -> { where.not(article_id: nil) }
   scope :without_articles, -> { where(article_id: nil) }
   scope :with_links, -> { where.not(external_url: nil) }
+  scope :needs_score_calculation, -> { where(score_calculation_status: ['not_calculated', 'fast_calculated']) }
+  scope :needs_metric_update, ->(since) { where('metrics_updated_at IS NULL OR metrics_updated_at < ?', since) }
+  scope :from_last_24_hours, -> { where('posted_at > ?', 24.hours.ago) }
+  scope :older_than_24_hours, -> { where('posted_at <= ?', 24.hours.ago) }
 
   # Instance methods
   def latest_metrics
@@ -54,14 +64,48 @@ class Post < ApplicationRecord
     calculate_overperformance_score
   end
 
-  # Calculate and cache the score
+  # Calculate using cached baseline (fast calculation)
+  def calculate_fast_overperformance_score
+    baseline = social_account.baseline_interactions_average
+    return 0 if baseline.nil? || baseline.zero?
+
+    score = ((latest_total_interactions / baseline.to_f) * 100).round(2)
+
+    update_columns(
+      overperformance_score_cache: score,
+      score_calculated_at: Time.current,
+      score_calculation_status: 'fast_calculated',
+      last_calculated_interactions: latest_total_interactions
+    )
+
+    score
+  end
+
+  # Calculate and cache the score (full calculation with baseline recalc)
   def calculate_and_cache_overperformance_score!
     score = calculate_overperformance_score
     update_columns(
       overperformance_score_cache: score,
-      score_calculated_at: Time.current
+      score_calculated_at: Time.current,
+      score_calculation_status: 'fully_calculated',
+      last_calculated_interactions: latest_total_interactions
     )
     score
+  end
+
+  # Check if metrics have changed since last calculation
+  def metrics_changed?
+    return true if last_calculated_interactions.nil?
+
+    latest_total_interactions != last_calculated_interactions
+  end
+
+  # Check if this post needs a score recalculation
+  def needs_score_recalculation?
+    score_not_calculated? ||
+      score_fast_calculated? ||
+      metrics_changed? ||
+      (score_calculated_at && score_calculated_at < 1.hour.ago)
   end
 
   def truncated_content(length = 100)

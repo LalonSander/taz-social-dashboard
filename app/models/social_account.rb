@@ -27,4 +27,43 @@ class SocialAccount < ApplicationRecord
   def display_name
     "@#{handle}"
   end
+
+  # Check if baseline needs recalculation
+  def needs_baseline_recalculation?
+    baseline_calculated_at.nil? || baseline_calculated_at < 1.hour.ago
+  end
+
+  # Calculate and cache the baseline average for overperformance calculations
+  def calculate_and_cache_baseline!
+    # Get last 100 posts before calculating
+    baseline_posts = posts
+                     .order(posted_at: :desc)
+                     .limit(100)
+                     .includes(:post_metrics)
+
+    # Get latest interaction count for each post
+    interactions = baseline_posts.map(&:latest_total_interactions).compact
+
+    return 0 if interactions.size < 20 # Not enough data
+
+    # Remove top 10 and bottom 10
+    sorted = interactions.sort
+    trimmed = if sorted.size > 20
+                sorted[10..-11]
+              else
+                sorted
+              end
+
+    return 0 if trimmed.empty?
+
+    baseline_avg = (trimmed.sum / trimmed.size.to_f).round(2)
+
+    update_columns(
+      baseline_interactions_average: baseline_avg,
+      baseline_calculated_at: Time.current,
+      baseline_sample_size: trimmed.size
+    )
+
+    baseline_avg
+  end
 end
