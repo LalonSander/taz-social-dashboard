@@ -408,6 +408,18 @@ class HourlyArticleImportJob < ApplicationJob
       end
     end
 
+    if results[:prediction_calculation]
+      Rails.logger.info "\nPrediction Calculation:"
+      if results[:prediction_calculation][:success]
+        Rails.logger.info "  ✓ #{results[:prediction_calculation][:calculated]} predictions calculated"
+        if results[:prediction_calculation][:errors] > 0
+          Rails.logger.info "  ✗ #{results[:prediction_calculation][:errors]} errors"
+        end
+      else
+        Rails.logger.info "  ✗ Failed: #{results[:prediction_calculation][:error]}"
+      end
+    end
+
     Rails.logger.info "\nCompleted at #{Time.current}"
     Rails.logger.info "=" * 80
   end
