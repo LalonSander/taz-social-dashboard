@@ -10,6 +10,10 @@ module TextSimilarity
 
       return 0.0 if tokens1.empty? || tokens2.empty?
 
+      # Require minimum number of shared tokens
+      shared_tokens = tokens1 & tokens2
+      return 0.0 if shared_tokens.size < 3 # At least 3 shared words required
+
       # Calculate IDF-weighted cosine similarity
       weighted_cosine_similarity(tokens1, tokens2, term_rarity)
 
