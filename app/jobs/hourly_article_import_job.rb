@@ -16,6 +16,7 @@ class HourlyArticleImportJob < ApplicationJob
       rss_import: nil,
       xml_refresh: nil,
       post_linking: nil,
+      prediction_calculation: nil, # ADD THIS LINE
       success: false,
       errors: []
     }
@@ -31,6 +32,9 @@ class HourlyArticleImportJob < ApplicationJob
 
     # Step 4: Link posts to articles
     results[:post_linking] = link_posts_to_articles
+
+    # Step 5: Calculate predictions for new articles
+    results[:prediction_calculation] = calculate_predictions_for_new_articles # ADD THIS LINE
 
     # Mark as successful if all steps completed
     results[:success] = results[:errors].empty?
@@ -288,6 +292,66 @@ class HourlyArticleImportJob < ApplicationJob
     end
   end
 
+  # Step 5: Calculate predictions for newly imported articles
+  def calculate_predictions_for_new_articles
+    Rails.logger.info "\n" + ("-" * 80)
+    Rails.logger.info "STEP 5: Calculating predictions for new articles"
+    Rails.logger.info "-" * 80
+
+    start_time = Time.current
+
+    begin
+      # Find articles without predictions from the last 24 hours
+      articles_needing_predictions = Article
+                                     .where(predicted_performance_score: nil)
+                                     .where('published_at > ?', 24.hours.ago)
+                                     .order(published_at: :desc)
+
+      Rails.logger.info "Found #{articles_needing_predictions.count} articles needing predictions"
+
+      if articles_needing_predictions.empty?
+        return { success: true, calculated: 0, skipped: 0, errors: 0,
+                 duration: Time.current - start_time }
+      end
+
+      calculated_count = 0
+      error_count = 0
+
+      articles_needing_predictions.each_with_index do |article, index|
+        article.calculate_prediction!
+        calculated_count += 1
+        Rails.logger.debug "Calculated prediction for article #{article.msid} (#{index + 1}/#{articles_needing_predictions.count})"
+      rescue StandardError => e
+        error_count += 1
+        Rails.logger.error "Failed to calculate prediction for article #{article.msid}: #{e.message}"
+      end
+
+      duration = Time.current - start_time
+
+      Rails.logger.info "Prediction calculation completed in #{duration.round(2)}s"
+      Rails.logger.info "  Calculated: #{calculated_count}"
+      Rails.logger.info "  Errors: #{error_count}"
+
+      {
+        success: true,
+        duration: duration,
+        calculated: calculated_count,
+        errors: error_count,
+        total_processed: articles_needing_predictions.count
+      }
+    rescue StandardError => e
+      error_message = "Prediction calculation failed: #{e.message}"
+      Rails.logger.error error_message
+      Rails.logger.error e.backtrace.join("\n")
+
+      {
+        success: false,
+        error: error_message,
+        duration: Time.current - start_time
+      }
+    end
+  end
+
   # Log final summary of the entire job
   def log_final_summary(results)
     Rails.logger.info "\n" + ("=" * 80)
@@ -298,7 +362,8 @@ class HourlyArticleImportJob < ApplicationJob
       results[:bluesky_sync]&.dig(:duration) || 0,
       results[:rss_import]&.dig(:duration) || 0,
       results[:xml_refresh]&.dig(:duration) || 0,
-      results[:post_linking]&.dig(:duration) || 0
+      results[:post_linking]&.dig(:duration) || 0,
+      results[:prediction_calculation]&.dig(:duration) || 0 # ADD THIS LINE
     ].sum
 
     Rails.logger.info "Total Duration: #{total_duration.round(2)}s"

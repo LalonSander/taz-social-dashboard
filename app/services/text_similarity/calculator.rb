@@ -1,17 +1,20 @@
-# app/services/text_similarity/calculator.rb - SIMPLIFIED VERSION
+# app/services/text_similarity/calculator.rb
 
 module TextSimilarity
   class Calculator
-    # Calculate similarity between two articles (on-the-fly)
+    # Calculate similarity between two articles using IDF-weighted cosine similarity
     # Returns score from 0 to 1
-    def self.calculate_similarity(article1, article2)
+    def self.calculate_similarity(article1, article2, all_candidates:)
       tokens1 = GermanPreprocessor.preprocess(article1)
       tokens2 = GermanPreprocessor.preprocess(article2)
 
       return 0.0 if tokens1.empty? || tokens2.empty?
 
-      # Calculate Jaccard similarity
-      cosine_similarity(tokens1, tokens2)
+      # Calculate term rarity (IDF) across all candidate articles
+      term_rarity = calculate_term_rarity(all_candidates)
+
+      # Calculate IDF-weighted cosine similarity
+      weighted_cosine_similarity(tokens1, tokens2, term_rarity)
     end
 
     # Find similar articles to a given article
@@ -22,7 +25,11 @@ module TextSimilarity
       candidates.each do |candidate|
         next if candidate.id == target_article.id
 
-        similarity = calculate_similarity(target_article, candidate)
+        similarity = calculate_similarity(
+          target_article,
+          candidate,
+          all_candidates: candidates
+        )
 
         next unless similarity >= min_similarity
 
@@ -38,37 +45,59 @@ module TextSimilarity
 
     private
 
-    # Calculate Jaccard similarity between two token arrays
-    def self.jaccard_similarity(tokens1, tokens2)
-      set1 = tokens1.to_set
-      set2 = tokens2.to_set
+    # Calculate term rarity (IDF) across all candidate articles
+    # Returns hash of term => rarity_score
+    def self.calculate_term_rarity(candidates)
+      document_frequency = Hash.new(0)
+      total_documents = candidates.size.to_f
 
-      intersection = set1 & set2
-      return 0.0 if intersection.empty?
+      # Count how many documents each term appears in
+      candidates.each do |candidate|
+        tokens = GermanPreprocessor.preprocess(candidate)
+        unique_tokens = tokens.uniq
 
-      union = set1 | set2
-      intersection.size.to_f / union.size.to_f
+        unique_tokens.each do |token|
+          document_frequency[token] += 1
+        end
+      end
+
+      # Calculate IDF score for each term
+      # IDF = log(total_documents / document_frequency)
+      # Higher score = rarer term = more important
+      term_rarity = {}
+
+      document_frequency.each do |term, freq|
+        term_rarity[term] = Math.log(total_documents / freq)
+      end
+
+      term_rarity
     end
 
-    # Alternative: TF-IDF weighted cosine similarity
-    # Uncomment to use this instead of Jaccard
-    def self.cosine_similarity(tokens1, tokens2)
-      # Build vocabulary
-      vocab = (tokens1 + tokens2).uniq
+    # Calculate IDF-weighted cosine similarity between two token arrays
+    def self.weighted_cosine_similarity(tokens1, tokens2, term_rarity)
+      # Build vocabulary from both documents
+      vocabulary = (tokens1 + tokens2).uniq
 
-      # Calculate term frequencies
-      tf1 = calculate_tf(tokens1, vocab)
-      tf2 = calculate_tf(tokens2, vocab)
+      # Calculate term frequencies for each document
+      tf1 = calculate_term_frequency(tokens1, vocabulary)
+      tf2 = calculate_term_frequency(tokens2, vocabulary)
 
-      # Calculate cosine similarity
+      # Calculate weighted cosine similarity
       dot_product = 0.0
       magnitude1 = 0.0
       magnitude2 = 0.0
 
-      vocab.each do |term|
-        dot_product += tf1[term] * tf2[term]
-        magnitude1 += tf1[term]**2
-        magnitude2 += tf2[term]**2
+      vocabulary.each do |term|
+        # Get IDF weight (default to 1.0 if term not in rarity hash)
+        idf_weight = term_rarity[term] || 1.0
+
+        # Weight the term frequencies by IDF
+        weighted_tf1 = tf1[term] * idf_weight
+        weighted_tf2 = tf2[term] * idf_weight
+
+        dot_product += weighted_tf1 * weighted_tf2
+        magnitude1 += weighted_tf1**2
+        magnitude2 += weighted_tf2**2
       end
 
       return 0.0 if magnitude1.zero? || magnitude2.zero?
@@ -76,20 +105,22 @@ module TextSimilarity
       dot_product / (Math.sqrt(magnitude1) * Math.sqrt(magnitude2))
     end
 
-    def self.calculate_tf(tokens, vocab)
-      tf = Hash.new(0.0)
+    # Calculate term frequency for tokens
+    # Returns hash of term => frequency
+    def self.calculate_term_frequency(tokens, vocabulary)
+      term_frequency = Hash.new(0.0)
       token_count = tokens.size.to_f
 
       tokens.each do |token|
-        tf[token] += 1.0 / token_count
+        term_frequency[token] += 1.0 / token_count
       end
 
-      # Fill in zeros for missing terms
-      vocab.each do |term|
-        tf[term] ||= 0.0
+      # Fill in zeros for missing terms in vocabulary
+      vocabulary.each do |term|
+        term_frequency[term] ||= 0.0
       end
 
-      tf
+      term_frequency
     end
   end
 end

@@ -116,7 +116,14 @@ class ArticlesController < ApplicationController
 
   def refresh
     if @article.refresh_from_xml!
-      redirect_to @article, notice: "Article refreshed successfully from XML."
+      # Calculate prediction after successful refresh
+      begin
+        @article.calculate_prediction!
+        redirect_to @article, notice: "Article refreshed successfully from XML. Prediction recalculated."
+      rescue StandardError => e
+        Rails.logger.error "Failed to calculate prediction for article #{@article.msid}: #{e.message}"
+        redirect_to @article, notice: "Article refreshed successfully from XML, but prediction calculation failed."
+      end
     else
       redirect_to @article, alert: "Failed to refresh article from XML. Please try again."
     end
