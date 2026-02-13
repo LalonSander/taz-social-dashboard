@@ -11,10 +11,13 @@ module TextSimilarity
       return 0.0 if tokens1.empty? || tokens2.empty?
 
       # Calculate term rarity (IDF) across all candidate articles
-      term_rarity = calculate_term_rarity(all_candidates)
+      # term_rarity = calculate_term_rarity(all_candidates)
 
       # Calculate IDF-weighted cosine similarity
-      weighted_cosine_similarity(tokens1, tokens2, term_rarity)
+      # weighted_cosine_similarity(tokens1, tokens2, term_rarity)
+
+      # Simplified: use unweighted cosine similarity
+      weighted_cosine_similarity(tokens1, tokens2, {})
     end
 
     # Find similar articles to a given article
