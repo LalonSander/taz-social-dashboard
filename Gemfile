@@ -48,6 +48,9 @@ gem 'httparty', '~> 0.21'
 # Pagination
 gem 'kaminari', '~> 1.2'
 
+# Cron job scheduling
+gem 'whenever', require: false
+
 # Use Redis adapter to run Action Cable in production
 
 # Use Kredis to get higher-level data types in Redis [https://github.com/rails/kredis]

@@ -35,8 +35,10 @@ class SocialAccount < ApplicationRecord
 
   # Calculate and cache the baseline average for overperformance calculations
   def calculate_and_cache_baseline!
-    # Get last 100 posts before calculating
+    # Get last 100 posts, excluding text posts
     baseline_posts = posts
+                     .where("posts.platform_url ILIKE '%' || ? || '%'", handle) # Only our posts
+                     .where.not(post_type: 'text') # Exclude all text posts
                      .order(posted_at: :desc)
                      .limit(100)
                      .includes(:post_metrics)

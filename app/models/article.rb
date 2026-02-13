@@ -17,7 +17,7 @@ class Article < ApplicationRecord
   scope :published_before, ->(date) { where('published_at <= ?', date) }
 
   # Callbacks
-  after_create :calculate_prediction_async
+  #  after_create :calculate_prediction_async
 
   # Class methods
 

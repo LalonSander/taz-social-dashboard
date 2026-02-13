@@ -4,9 +4,6 @@ class PostsController < ApplicationController
   before_action :authenticate_user!
 
   def index
-    # Auto-sync if it's been more than 1 hour since last sync
-    auto_sync_if_needed
-
     @posts = Post
              .joins(:social_account)
              .includes(:social_account, :post_metrics)
@@ -117,29 +114,6 @@ class PostsController < ApplicationController
   end
 
   private
-
-  def auto_sync_if_needed
-    accounts = SocialAccount.bluesky.active
-    return if accounts.empty?
-
-    # Check if any account needs sync
-    accounts_needing_sync = accounts.select(&:needs_sync?)
-    return if accounts_needing_sync.empty?
-
-    # Perform fast sync for accounts that need it
-    accounts_needing_sync.each do |account|
-      service = SocialPlatform::Bluesky.new(account)
-      result = service.fast_sync
-
-      if result[:success]
-        account.update!(last_synced_at: result[:synced_at])
-        # Spawn background thread for slow backfill
-        spawn_background_backfill(account)
-      end
-    rescue StandardError => e
-      Rails.logger.error "Auto-sync failed for #{account.handle}: #{e.message}"
-    end
-  end
 
   def ensure_scores_for_sorting
     # When sorting by overperformance, we need to ensure all posts have scores

@@ -172,9 +172,13 @@ class Post < ApplicationRecord
 
   def calculate_baseline
     # Get last 100 posts before this one from the same account
+    # Exclude text posts (which include replies)
     baseline_posts = Post
+                     .joins(:social_account)
                      .where(social_account_id: social_account_id)
                      .where("posted_at < ?", posted_at)
+                     .where("posts.platform_url ILIKE '%' || social_accounts.handle || '%'") # Only posts from our account
+                     .where.not(post_type: 'text') # Exclude all text posts
                      .order(posted_at: :desc)
                      .limit(100)
                      .includes(:post_metrics)

@@ -53,9 +53,11 @@ class PerformancePredictor
 
     candidates = Article
                  .joins(:posts)
+                 .joins('INNER JOIN social_accounts ON posts.social_account_id = social_accounts.id')
                  .where('articles.published_at > ?', cutoff_date)
                  .where('articles.published_at < ?', @article.published_at) # Only past articles
                  .where.not(id: @article.id)
+                 .where("posts.platform_url ILIKE '%' || social_accounts.handle || '%'") # Only posts from our accounts
                  .distinct
 
     puts candidates.count

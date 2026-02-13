@@ -5,9 +5,6 @@ class ArticlesController < ApplicationController
   before_action :set_article, only: %i[show refresh]
 
   def index
-    # Auto-sync if last article is older than 1 hour
-    auto_sync_rss_if_needed
-
     @articles = Article.includes(:posts).all
 
     # Search by title or msid
@@ -129,25 +126,5 @@ class ArticlesController < ApplicationController
 
   def set_article
     @article = Article.find(params[:id])
-  end
-
-  def auto_sync_rss_if_needed
-    last_sync = Article.maximum(:created_at)
-
-    # If no articles OR last article created more than 1 hour ago
-    return unless last_sync.nil? || last_sync < 1.hour.ago
-
-    Rails.logger.info "Auto-syncing RSS feeds (last sync: #{last_sync})"
-
-    # Run sync in background thread to not block page load
-    Thread.new do
-      ActiveRecord::Base.connection_pool.with_connection do
-        importer = Taz::RssImporter.new
-        importer.import_all
-
-        # Link posts after import
-        PostArticleLinker.link_all_unlinked_posts
-      end
-    end
   end
 end
