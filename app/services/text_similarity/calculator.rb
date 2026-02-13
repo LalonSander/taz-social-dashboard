@@ -4,26 +4,26 @@ module TextSimilarity
   class Calculator
     # Calculate similarity between two articles using IDF-weighted cosine similarity
     # Returns score from 0 to 1
-    def self.calculate_similarity(article1, article2, all_candidates:)
+    def self.calculate_similarity(article1, article2, term_rarity:)
       tokens1 = GermanPreprocessor.preprocess(article1)
       tokens2 = GermanPreprocessor.preprocess(article2)
 
       return 0.0 if tokens1.empty? || tokens2.empty?
 
-      # Calculate term rarity (IDF) across all candidate articles
-      # term_rarity = calculate_term_rarity(all_candidates)
-
       # Calculate IDF-weighted cosine similarity
-      # weighted_cosine_similarity(tokens1, tokens2, term_rarity)
+      weighted_cosine_similarity(tokens1, tokens2, term_rarity)
 
       # Simplified: use unweighted cosine similarity
-      weighted_cosine_similarity(tokens1, tokens2, {})
+      # weighted_cosine_similarity(tokens1, tokens2, {})
     end
 
     # Find similar articles to a given article
     # Returns array of hashes with article and similarity_score
-    def self.find_similar_articles(target_article, candidates, min_similarity: 0.1)
+    def self.find_similar_articles(target_article, candidates, min_similarity: 0.2)
       results = []
+
+      # Calculate term rarity ONCE for all candidates
+      term_rarity = calculate_term_rarity(candidates)
 
       candidates.each do |candidate|
         next if candidate.id == target_article.id
@@ -31,7 +31,7 @@ module TextSimilarity
         similarity = calculate_similarity(
           target_article,
           candidate,
-          all_candidates: candidates
+          term_rarity: term_rarity # Pass pre-calculated rarity
         )
 
         next unless similarity >= min_similarity
@@ -51,29 +51,25 @@ module TextSimilarity
     # Calculate term rarity (IDF) across all candidate articles
     # Returns hash of term => rarity_score
     def self.calculate_term_rarity(candidates)
-      document_frequency = Hash.new(0)
-      total_documents = candidates.size.to_f
+      # Combine all candidate text into one big string
+      combined_text = candidates.map do |candidate|
+        GermanPreprocessor.combine_text(candidate)
+      end.join(' ')
 
-      # Count how many documents each term appears in
-      candidates.each do |candidate|
-        tokens = GermanPreprocessor.preprocess(candidate)
-        unique_tokens = tokens.uniq
+      # Preprocess once
+      all_tokens = GermanPreprocessor.tokenize(combined_text)
+      all_tokens = GermanPreprocessor.remove_stopwords(all_tokens)
 
-        unique_tokens.each do |token|
-          document_frequency[token] += 1
-        end
+      # Count term frequency - using tally (Ruby 2.7+)
+      term_counts = all_tokens.tally
+
+      # Calculate IDF-like score based on total frequency
+      # Lower frequency = higher rarity = higher weight
+      max_count = term_counts.values.max.to_f
+
+      term_counts.transform_values do |count|
+        Math.log(max_count / count)
       end
-
-      # Calculate IDF score for each term
-      # IDF = log(total_documents / document_frequency)
-      # Higher score = rarer term = more important
-      term_rarity = {}
-
-      document_frequency.each do |term, freq|
-        term_rarity[term] = Math.log(total_documents / freq)
-      end
-
-      term_rarity
     end
 
     # Calculate IDF-weighted cosine similarity between two token arrays
@@ -111,12 +107,10 @@ module TextSimilarity
     # Calculate term frequency for tokens
     # Returns hash of term => frequency
     def self.calculate_term_frequency(tokens, vocabulary)
-      term_frequency = Hash.new(0.0)
       token_count = tokens.size.to_f
 
-      tokens.each do |token|
-        term_frequency[token] += 1.0 / token_count
-      end
+      # Count occurrences and normalize in one step
+      term_frequency = tokens.tally.transform_values { |count| count / token_count }
 
       # Fill in zeros for missing terms in vocabulary
       vocabulary.each do |term|
