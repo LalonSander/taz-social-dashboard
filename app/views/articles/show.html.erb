@@ -63,7 +63,9 @@
             <div class="mb-2">
               <small class="text-muted d-block">Predicted Performance</small>
               <% score = @article.predicted_performance_score %>
-              <span class="badge <%= if score >= 150
+              <span class="badge <%= if score == 100.0
+                        'bg-secondary'  # Grey for default 100%
+                      elsif score >= 150
                         'bg-success'
                       elsif score >= 100
                         'bg-primary'
@@ -71,7 +73,7 @@
                         'bg-warning text-dark'
                       else
                         'bg-danger'
-                      end %> fs-5">
+                      end %> fs-6">
                 <%= number_with_precision(score, precision: 1) %>%
               </span>
             </div>

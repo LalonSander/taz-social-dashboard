@@ -155,8 +155,19 @@
                   </td>
                   <td class="text-nowrap">
                     <% if article.predicted_performance_score.present? %>
-                      <span class="badge bg-success">
-                        <%= number_with_precision(article.predicted_performance_score, precision: 1) %>
+                      <% score = article.predicted_performance_score.to_f %>
+                      <span class="badge <%= if score == 100.0
+                                'bg-secondary'
+                              elsif score >= 150
+                                'bg-success'
+                              elsif score >= 100
+                                'bg-primary'
+                              elsif score >= 50
+                                'bg-warning text-dark'
+                              else
+                                'bg-danger'
+                              end %>">
+                        <%= number_with_precision(score, precision: 0) %>%
                       </span>
                     <% else %>
                       <span class="text-muted small">Not calculated</span>
