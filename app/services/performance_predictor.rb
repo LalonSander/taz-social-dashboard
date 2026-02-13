@@ -1,7 +1,7 @@
 # app/services/performance_predictor.rb - FIXED VERSION
 
 class PerformancePredictor
-  SIMILARITY_THRESHOLD = 0.2
+  SIMILARITY_THRESHOLD = 0.15
   MAX_ARTICLE_AGE_MONTHS = 3
   DECAY_CONSTANT = 0.3 # Lambda for exponential decay
   DEFAULT_SCORE = 100.0 # Baseline average when no similar articles found
